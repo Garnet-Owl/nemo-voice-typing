@@ -12,7 +12,7 @@ public sealed class AppConfig
             "Desktop", "personal-dev-ops", "nemo-voice-typing",
             "models", "nemotron-speech-streaming-en-0.6b-generic-cpu-3", "v3");
 
-    public string Hotkey { get; set; } = "Ctrl+Shift+A";
+    public string Hotkey { get; set; } = "Ctrl+Alt+A";
     public bool RunAtStartup { get; set; } = false;
     public double PanelLeft { get; set; } = double.NaN;
     public double PanelTop { get; set; } = double.NaN;

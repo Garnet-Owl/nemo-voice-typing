@@ -16,5 +16,5 @@ dotnet run --project src/VoiceTyping
 ```
 
 ## Hotkey
-`Ctrl+Shift+A` — toggle dictation (one-handed, left-hand cluster). Editable in
+`Ctrl+Alt+A` — toggle dictation (one-handed, left-hand cluster). Editable in
 `%APPDATA%\VoiceTyping\config.json`.

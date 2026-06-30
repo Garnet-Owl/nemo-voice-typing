@@ -36,6 +36,17 @@ public sealed class NemoStreamingAsr : IDisposable
     private readonly MelExtractor _mel;
     private readonly Tokenizer _tokenizer;
 
+    // Preallocated tensors & input arrays (re-used across chunks)
+    private readonly DenseTensor<float> _encInTensor;
+    private readonly DenseTensor<long> _lengthTensor;
+    private readonly DenseTensor<float> _encFrameTensor;
+    private readonly DenseTensor<long> _targetsTensor;
+    private readonly DenseTensor<float> _hInTensor;
+    private readonly DenseTensor<float> _cInTensor;
+    private readonly NamedOnnxValue[] _encOnce;
+    private readonly NamedOnnxValue[] _decOnce;
+    private readonly NamedOnnxValue[] _jointOnce;
+
     // Sliding audio buffer: enough for chunk + ~512 lookahead for windowing
     private readonly List<float> _audioBuf = new();
     // Cached previous mel frames for pre-encode cache
@@ -50,18 +61,63 @@ public sealed class NemoStreamingAsr : IDisposable
     // Decoder state (kept across utterances)
     private float[] _h = new float[DecLayers * 1 * DecHidden];
     private float[] _c = new float[DecLayers * 1 * DecHidden];
+    private float[] _hPending = new float[DecLayers * 1 * DecHidden];
+    private float[] _cPending = new float[DecLayers * 1 * DecHidden];
     private long _lastToken = BlankId;
 
     public event Action<string>? TokenEmitted;
 
     public NemoStreamingAsr(string modelDir)
     {
-        var so = new SessionOptions { LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR };
+        var so = new SessionOptions
+        {
+            LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR,
+            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
+            ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
+            // Match nemo session_options from genai_config: disable thread spinning
+            // (lower CPU between chunks, friendlier for an always-on background app)
+        };
+        so.AddSessionConfigEntry("session.intra_op.allow_spinning", "0");
+        // Use roughly half the cores — the encoder is the only heavy op and it
+        // parallelises well, but we don't want to monopolise the box.
+        int cores = Math.Max(1, Environment.ProcessorCount / 2);
+        so.IntraOpNumThreads = cores;
+        so.InterOpNumThreads = 1;
+
         _encoder = new InferenceSession(Path.Combine(modelDir, "encoder.onnx"), so);
         _decoder = new InferenceSession(Path.Combine(modelDir, "decoder.onnx"), so);
         _joint = new InferenceSession(Path.Combine(modelDir, "joint.onnx"), so);
         _mel = new MelExtractor();
         _tokenizer = new Tokenizer(Path.Combine(modelDir, "vocab.txt"));
+
+        // Preallocate tensors that don't change shape across calls
+        _encInTensor = new DenseTensor<float>(new[] { 1, EncoderTimeIn, NMels });
+        _lengthTensor = new DenseTensor<long>(new long[] { EncoderTimeIn }, new[] { 1 });
+        _encFrameTensor = new DenseTensor<float>(new[] { 1, 1, EncHidden });
+        _targetsTensor = new DenseTensor<long>(new[] { 1, 1 });
+        _hInTensor = new DenseTensor<float>(_h, new[] { DecLayers, 1, DecHidden });
+        _cInTensor = new DenseTensor<float>(_c, new[] { DecLayers, 1, DecHidden });
+
+        _encOnce = new NamedOnnxValue[]
+        {
+            NamedOnnxValue.CreateFromTensor("audio_signal", _encInTensor),
+            NamedOnnxValue.CreateFromTensor("length", _lengthTensor),
+            // cache_* tensors are rebuilt each call because the backing array changes
+            null!, null!, null!,
+        };
+
+        _decOnce = new NamedOnnxValue[]
+        {
+            NamedOnnxValue.CreateFromTensor("targets", _targetsTensor),
+            NamedOnnxValue.CreateFromTensor("h_in", _hInTensor),
+            NamedOnnxValue.CreateFromTensor("c_in", _cInTensor),
+        };
+
+        _jointOnce = new NamedOnnxValue[]
+        {
+            NamedOnnxValue.CreateFromTensor("encoder_output", _encFrameTensor),
+            null!,
+        };
     }
 
     /// <summary>Drop all caches; call between utterances.</summary>
@@ -97,46 +153,39 @@ public sealed class NemoStreamingAsr : IDisposable
 
     private void ProcessChunk(float[] chunk)
     {
-        // 56 mel frames from this chunk (hop=160 → 8960/160=56), center=true, reflect-padded
-        int newFrames = ChunkSamples / MelExtractor.HopLength;
+        int newFrames = ChunkSamples / MelExtractor.HopLength; // 56
         var newMels = _mel.Compute(chunk, newFrames);
 
-        // Build encoder input: [9 cached mel frames] + [56 new mel frames] → 65 frames
-        var encIn = new DenseTensor<float>(new[] { 1, EncoderTimeIn, NMels });
+        // Fill encoder input in-place: 9 cached frames + 56 new frames
         for (int t = 0; t < PreEncodeCacheFrames; t++)
             for (int m = 0; m < NMels; m++)
-                encIn[0, t, m] = _melCachePrimed ? _melCache[m, t] : 0f;
+                _encInTensor[0, t, m] = _melCachePrimed ? _melCache[m, t] : 0f;
         for (int t = 0; t < newFrames; t++)
             for (int m = 0; m < NMels; m++)
-                encIn[0, PreEncodeCacheFrames + t, m] = newMels[m, t];
+                _encInTensor[0, PreEncodeCacheFrames + t, m] = newMels[m, t];
 
-        // Update mel cache with last 9 frames of newMels
+        // Rotate mel cache
         for (int t = 0; t < PreEncodeCacheFrames; t++)
             for (int m = 0; m < NMels; m++)
                 _melCache[m, t] = newMels[m, newFrames - PreEncodeCacheFrames + t];
         _melCachePrimed = true;
 
-        var lengthTensor = new DenseTensor<long>(new long[] { EncoderTimeIn }, new[] { 1 });
-        var cacheCh = new DenseTensor<float>(_cacheLastChannel, new[] { 1, EncLayers, LeftContext, EncHidden });
-        var cacheTime = new DenseTensor<float>(_cacheLastTime, new[] { 1, EncLayers, EncHidden, ConvContext });
-        var cacheLen = new DenseTensor<long>(_cacheLastChannelLen, new[] { 1 });
+        // Cache tensors — backing arrays may be reassigned per call by ONNX, so
+        // we rebuild the wrapper but reuse the float buffers ONNX returns.
+        _encOnce[2] = NamedOnnxValue.CreateFromTensor("cache_last_channel",
+            new DenseTensor<float>(_cacheLastChannel, new[] { 1, EncLayers, LeftContext, EncHidden }));
+        _encOnce[3] = NamedOnnxValue.CreateFromTensor("cache_last_time",
+            new DenseTensor<float>(_cacheLastTime, new[] { 1, EncLayers, EncHidden, ConvContext }));
+        _encOnce[4] = NamedOnnxValue.CreateFromTensor("cache_last_channel_len",
+            new DenseTensor<long>(_cacheLastChannelLen, new[] { 1 }));
 
-        var encInputs = new List<NamedOnnxValue>
-        {
-            NamedOnnxValue.CreateFromTensor("audio_signal", encIn),
-            NamedOnnxValue.CreateFromTensor("length", lengthTensor),
-            NamedOnnxValue.CreateFromTensor("cache_last_channel", cacheCh),
-            NamedOnnxValue.CreateFromTensor("cache_last_time", cacheTime),
-            NamedOnnxValue.CreateFromTensor("cache_last_channel_len", cacheLen),
-        };
-
-        using var encResults = _encoder.Run(encInputs);
-        DenseTensor<float>? encOut = null;
+        using var encResults = _encoder.Run(_encOnce);
+        Tensor<float>? encOut = null;
         foreach (var v in encResults)
         {
             switch (v.Name)
             {
-                case "outputs": encOut = (DenseTensor<float>)v.AsTensor<float>().ToDenseTensor(); break;
+                case "outputs": encOut = v.AsTensor<float>(); break;
                 case "cache_last_channel_next": _cacheLastChannel = v.AsTensor<float>().ToArray(); break;
                 case "cache_last_time_next": _cacheLastTime = v.AsTensor<float>().ToArray(); break;
                 case "cache_last_channel_len_next": _cacheLastChannelLen = v.AsTensor<long>().ToArray(); break;
@@ -144,77 +193,58 @@ public sealed class NemoStreamingAsr : IDisposable
         }
         if (encOut == null) return;
 
-        // RNN-T greedy decode over EncTimeOut frames
         for (int t = 0; t < EncTimeOut; t++)
         {
-            // Slice encoder frame [1, 1, 1024]
-            var encFrame = new float[EncHidden];
-            for (int k = 0; k < EncHidden; k++) encFrame[k] = encOut[0, t, k];
+            for (int k = 0; k < EncHidden; k++)
+                _encFrameTensor[0, 0, k] = encOut[0, t, k];
 
             int symbols = 0;
             while (symbols < MaxSymbolsPerStep)
             {
-                // Decoder: targets [1, 1] = lastToken, h_in [2,1,640], c_in [2,1,640]
-                var targets = new DenseTensor<long>(new[] { _lastToken }, new[] { 1, 1 });
-                var hIn = new DenseTensor<float>(_h, new[] { DecLayers, 1, DecHidden });
-                var cIn = new DenseTensor<float>(_c, new[] { DecLayers, 1, DecHidden });
+                _targetsTensor[0, 0] = _lastToken;
+                // Refresh h/c in tensors (state arrays may have been replaced)
+                CopyInto(_h, _hInTensor);
+                CopyInto(_c, _cInTensor);
 
-                using var decResults = _decoder.Run(new List<NamedOnnxValue>
-                {
-                    NamedOnnxValue.CreateFromTensor("targets", targets),
-                    NamedOnnxValue.CreateFromTensor("h_in", hIn),
-                    NamedOnnxValue.CreateFromTensor("c_in", cIn),
-                });
-
+                using var decResults = _decoder.Run(_decOnce);
                 float[] decOut640 = Array.Empty<float>();
-                float[] hOutNext = _h;
-                float[] cOutNext = _c;
                 foreach (var v in decResults)
                 {
                     switch (v.Name)
                     {
                         case "decoder_output": decOut640 = v.AsTensor<float>().ToArray(); break;
-                        case "h_out": hOutNext = v.AsTensor<float>().ToArray(); break;
-                        case "c_out": cOutNext = v.AsTensor<float>().ToArray(); break;
+                        case "h_out": _hPending = v.AsTensor<float>().ToArray(); break;
+                        case "c_out": _cPending = v.AsTensor<float>().ToArray(); break;
                     }
                 }
 
-                // Joint: encoder_output [1,1,1024], decoder_output [1,1,640]
-                var encJ = new DenseTensor<float>(encFrame, new[] { 1, 1, EncHidden });
-                // decOut640 layout: [batch=1, hidden=640, target_len=1] -> same memory as [1,1,640]
-                var decJ = new DenseTensor<float>(decOut640, new[] { 1, 1, DecHidden });
+                _jointOnce[1] = NamedOnnxValue.CreateFromTensor("decoder_output",
+                    new DenseTensor<float>(decOut640, new[] { 1, 1, DecHidden }));
 
-                using var jntResults = _joint.Run(new List<NamedOnnxValue>
-                {
-                    NamedOnnxValue.CreateFromTensor("encoder_output", encJ),
-                    NamedOnnxValue.CreateFromTensor("decoder_output", decJ),
-                });
-
+                using var jntResults = _joint.Run(_jointOnce);
                 float[] logits = Array.Empty<float>();
                 foreach (var v in jntResults)
                     if (v.Name == "joint_output") logits = v.AsTensor<float>().ToArray();
 
-                // logits shape [1,1,1,1025]
                 int best = 0; float bestVal = float.NegativeInfinity;
                 for (int k = 0; k < VocabSize; k++)
-                {
                     if (logits[k] > bestVal) { bestVal = logits[k]; best = k; }
-                }
 
-                if (best == BlankId)
-                {
-                    break; // advance to next encoder frame
-                }
-                else
-                {
-                    _lastToken = best;
-                    _h = hOutNext;
-                    _c = cOutNext;
-                    TokenEmitted?.Invoke(_tokenizer.Piece(best));
-                    symbols++;
-                }
+                if (best == BlankId) break;
+
+                _lastToken = best;
+                _h = _hPending;
+                _c = _cPending;
+                TokenEmitted?.Invoke(_tokenizer.Piece(best));
+                symbols++;
             }
         }
+    }
+
+    private static void CopyInto(float[] src, DenseTensor<float> dst)
+    {
+        var span = dst.Buffer.Span;
+        src.AsSpan().CopyTo(span);
     }
 
     public void Dispose()

@@ -39,8 +39,9 @@ public partial class App : System.Windows.Application
 
         _panel = new FloatingPanel(_config);
         _panel.ToggleRequested += ToggleDictation;
+        _panel.ExitRequested += () => Shutdown();
         _panel.Show();
-        _panel.Hide(); // ensure HWND exists for hotkey, then start hidden
+        _panel.Hide();
 
         _hotkey = new HotkeyService();
         _hotkey.Pressed += ToggleDictation;

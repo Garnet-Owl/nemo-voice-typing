@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Windows;
 using VoiceTyping.Config;
@@ -12,11 +11,6 @@ namespace VoiceTyping;
 /// <summary>
 /// Owns the dictation lifecycle: bridges <see cref="AudioCapture"/> →
 /// <see cref="NemoStreamingAsr"/> → <see cref="TextInjector"/>.
-///
-/// Runs the ASR on a dedicated worker thread so the audio callback thread
-/// only enqueues samples and returns immediately. Emitted SentencePiece pieces
-/// are flushed to the focused window as they arrive, so the user sees text
-/// land in their target app with low latency.
 /// </summary>
 public sealed class DictationController : IDisposable
 {
@@ -29,14 +23,17 @@ public sealed class DictationController : IDisposable
     private readonly Queue<float[]> _queue = new();
     private readonly ManualResetEventSlim _signal = new(false);
     private volatile bool _running;
-    private readonly StringBuilder _utterance = new();
 
     public DictationController(AppConfig config, FloatingPanel panel)
     {
         _config = config;
         _panel = panel;
-        _panel.SetStatus(StatusFor(false), listening: false);
         _audio.SamplesAvailable += OnSamples;
+        _audio.LevelAvailable += level =>
+        {
+            _panel.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render,
+                new Action(() => _panel.PushAudioLevel(level)));
+        };
     }
 
     public void Toggle()
@@ -51,12 +48,10 @@ public sealed class DictationController : IDisposable
         {
             if (!Directory.Exists(_config.ModelDirectory))
             {
-                _panel.SetStatus("Model not found", listening: false);
-                _panel.SetPartial(_config.ModelDirectory);
+                MessageBox.Show("Model not found:\n" + _config.ModelDirectory,
+                    "Voice Typing", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            _panel.SetStatus("Loading model…", listening: false);
-            _panel.SetPartial("");
             try
             {
                 _asr = new NemoStreamingAsr(_config.ModelDirectory);
@@ -64,22 +59,20 @@ public sealed class DictationController : IDisposable
             }
             catch (Exception ex)
             {
-                _panel.SetStatus("Model load failed", listening: false);
-                _panel.SetPartial(ex.Message);
+                MessageBox.Show("Failed to load ASR model:\n" + ex.Message,
+                    "Voice Typing", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
         }
 
         _asr.Reset();
-        _utterance.Clear();
         _running = true;
 
         _worker = new Thread(WorkerLoop) { IsBackground = true, Name = "ASR Worker" };
         _worker.Start();
 
         _audio.Start();
-        _panel.SetStatus("Listening…", listening: true);
-        _panel.SetPartial("");
+        _panel.SetListening(true);
     }
 
     private void Stop()
@@ -89,7 +82,7 @@ public sealed class DictationController : IDisposable
         _signal.Set();
         _worker?.Join(500);
         _worker = null;
-        _panel.SetStatus(StatusFor(false), listening: false);
+        _panel.SetListening(false);
     }
 
     private void OnSamples(float[] buf)
@@ -117,11 +110,7 @@ public sealed class DictationController : IDisposable
             }
 
             try { _asr?.PushAudio(next); }
-            catch (Exception ex)
-            {
-                Application.Current?.Dispatcher.BeginInvoke(() =>
-                    _panel.SetPartial("ASR error: " + ex.Message));
-            }
+            catch { /* bad audio shouldn't crash dictation */ }
         }
     }
 
@@ -132,26 +121,12 @@ public sealed class DictationController : IDisposable
 
     private void OnTokenEmitted(string piece)
     {
-        // SentencePiece "▁foo" → " foo"; "bar" → "bar"
         string text = piece.Length > 0 && piece[0] == '\u2581'
             ? " " + piece.Substring(1)
             : piece;
         if (string.IsNullOrEmpty(text)) return;
-
-        _utterance.Append(text);
-        var preview = _utterance.ToString();
-        if (preview.Length > 80) preview = "…" + preview[^80..];
-
-        Application.Current?.Dispatcher.BeginInvoke(() =>
-        {
-            _panel.SetPartial(preview);
-            TextInjector.Type(text);
-        });
+        TextInjector.Type(text);
     }
-
-    private string StatusFor(bool listening) => listening
-        ? "Listening…"
-        : $"Idle — press {_config.Hotkey}";
 
     public void Dispose()
     {
