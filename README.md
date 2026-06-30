@@ -51,9 +51,9 @@ remembered between launches. Hotkey is configurable in
 
 ## Demo
 
-See it in action:
+[![Watch demo on YouTube](https://img.youtube.com/vi/k6MXKX_60T0/0.jpg)](https://www.youtube.com/watch?v=k6MXKX_60T0)
 
-![Demo video](demo.mp4)
+Click above to see the app in action.
 
 ### Voice commands
 
