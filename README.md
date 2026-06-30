@@ -49,6 +49,12 @@ The pill stays on top so you can drag it wherever. Position is
 remembered between launches. Hotkey is configurable in
 `%APPDATA%\NemoVoiceTyping\config.json`.
 
+## Demo
+
+See it in action:
+
+![Demo video](demo.mp4)
+
 ### Voice commands
 
 While dictating you can say any of these and they'll be acted on instead
