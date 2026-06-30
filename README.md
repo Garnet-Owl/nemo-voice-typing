@@ -16,9 +16,10 @@ that sits in the corner of my screen, starts on a chord I can hit with
 one hand, and ships with a real model. No cloud round-trips and no
 telemetry.
 
-If you want a tool that lets you dictate anywhere, anytime with excellent
-accuracy—works locally, works well with Rust docs, works with LLM prompts—
-one evening of hacking with a modern streaming ASR model gets you there.
+If you want a tool that lets you dictate anywhere, anytime on any window,
+whether searching, typing chats, or anything else on your desktop, and it 
+works really well, keeping your hands off the keyboard: I built it in one evening of 
+tinkering, here it is.
 
 ## Install
 
