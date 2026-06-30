@@ -14,7 +14,11 @@ and agents, which is a lot of long-form text, and my hands were starting
 to hurt. Windows' built-in voice typing is fine, but I wanted something
 that sits in the corner of my screen, starts on a chord I can hit with
 one hand, and ships with a real model. No cloud round-trips and no
-telemetry. One evening of hacking, here it is.
+telemetry.
+
+If you want a tool that lets you dictate anywhere, anytime with excellent
+accuracy—works locally, works well with Rust docs, works with LLM prompts—
+one evening of hacking with a modern streaming ASR model gets you there.
 
 ## Install
 
