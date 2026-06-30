@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <RootNamespace>VoiceTyping</RootNamespace>
-    <AssemblyName>VoiceTyping</AssemblyName>
+    <RootNamespace>NemoVoiceTyping</RootNamespace>
+    <AssemblyName>NemoVoiceTyping</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <Platforms>x64</Platforms>

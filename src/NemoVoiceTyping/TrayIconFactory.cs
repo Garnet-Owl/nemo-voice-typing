@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace VoiceTyping;
+namespace NemoVoiceTyping;
 
 /// <summary>
 /// Loads the app.ico embedded resource and exposes it as a <see cref="System.Drawing.Icon"/>

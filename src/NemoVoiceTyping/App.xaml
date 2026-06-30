@@ -1,4 +1,4 @@
-<Application x:Class="VoiceTyping.App"
+<Application x:Class="NemoVoiceTyping.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:tb="http://www.hardcodet.net/taskbar"
@@ -17,7 +17,7 @@
                 <MenuItem Header="Exit" Click="OnExit"/>
             </ContextMenu>
             <tb:TaskbarIcon x:Key="TrayIcon"
-                            ToolTipText="Nemo Voice Typing — Ctrl+Alt+A"
+                            ToolTipText="Nemo Voice Typing (Ctrl+Alt+A)"
                             ContextMenu="{StaticResource TrayMenu}"
                             TrayLeftMouseUp="OnTrayLeftClick"/>
         </ResourceDictionary>

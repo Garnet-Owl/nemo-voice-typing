@@ -4,7 +4,7 @@ using System.IO;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 
-namespace VoiceTyping.Services;
+namespace NemoVoiceTyping.Services;
 
 /// <summary>
 /// Streaming RNN-T decoder for the NVIDIA NeMo "nemotron-speech-streaming-en-0.6b" model.
@@ -78,7 +78,7 @@ public sealed class NemoStreamingAsr : IDisposable
             // (lower CPU between chunks, friendlier for an always-on background app)
         };
         so.AddSessionConfigEntry("session.intra_op.allow_spinning", "0");
-        // Use roughly half the cores — the encoder is the only heavy op and it
+        // Use roughly half the cores. The encoder is the only heavy op and it
         // parallelises well, but we don't want to monopolise the box.
         int cores = Math.Max(1, Environment.ProcessorCount / 2);
         so.IntraOpNumThreads = cores;
@@ -170,7 +170,7 @@ public sealed class NemoStreamingAsr : IDisposable
                 _melCache[m, t] = newMels[m, newFrames - PreEncodeCacheFrames + t];
         _melCachePrimed = true;
 
-        // Cache tensors — backing arrays may be reassigned per call by ONNX, so
+        // Cache tensors. Backing arrays may be reassigned per call by ONNX, so
         // we rebuild the wrapper but reuse the float buffers ONNX returns.
         _encOnce[2] = NamedOnnxValue.CreateFromTensor("cache_last_channel",
             new DenseTensor<float>(_cacheLastChannel, new[] { 1, EncLayers, LeftContext, EncHidden }));

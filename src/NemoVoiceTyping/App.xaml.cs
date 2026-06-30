@@ -3,10 +3,10 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using Hardcodet.Wpf.TaskbarNotification;
-using VoiceTyping.Config;
-using VoiceTyping.Services;
+using NemoVoiceTyping.Config;
+using NemoVoiceTyping.Services;
 
-namespace VoiceTyping;
+namespace NemoVoiceTyping;
 
 public partial class App : System.Windows.Application
 {
@@ -21,7 +21,7 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
-        _singleInstance = new Mutex(initiallyOwned: true, "Global\\VoiceTyping.SingleInstance", out var createdNew);
+        _singleInstance = new Mutex(initiallyOwned: true, "Global\\NemoVoiceTyping.SingleInstance", out var createdNew);
         if (!createdNew)
         {
             MessageBox.Show("Nemo Voice Typing is already running.", "Nemo Voice Typing",

@@ -1,6 +1,6 @@
 using System;
 
-namespace VoiceTyping.Services;
+namespace NemoVoiceTyping.Services;
 
 /// <summary>
 /// Streaming log-mel spectrogram for the NeMo nemotron streaming encoder.

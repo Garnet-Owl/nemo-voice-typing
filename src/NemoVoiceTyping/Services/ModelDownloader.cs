@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace VoiceTyping.Services;
+namespace NemoVoiceTyping.Services;
 
 /// <summary>
 /// Downloads the NeMo streaming ASR model from the Hugging Face Hub on first run.
@@ -31,7 +31,7 @@ public sealed class ModelDownloader
 
     public static string DefaultCacheDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "VoiceTyping", "models", "nemotron-speech-streaming-en-0.6b", "v3");
+        "NemoVoiceTyping", "models", "nemotron-speech-streaming-en-0.6b", "v3");
 
     public string CacheDir { get; }
     public string Repo { get; }
@@ -59,7 +59,7 @@ public sealed class ModelDownloader
     {
         Directory.CreateDirectory(CacheDir);
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("VoiceTyping/1.0 (+https://github.com/Garnet-Owl/nemo-voice-typing)");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("NemoVoiceTyping/1.0 (+https://github.com/Garnet-Owl/nemo-voice-typing)");
 
         for (int i = 0; i < RequiredFiles.Length; i++)
         {

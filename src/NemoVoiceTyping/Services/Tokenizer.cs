@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace VoiceTyping.Services;
+namespace NemoVoiceTyping.Services;
 
 /// <summary>
 /// SentencePiece-style vocab loader for the NeMo nemotron model.

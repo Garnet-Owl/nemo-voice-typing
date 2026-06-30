@@ -2,12 +2,12 @@ using System;
 using Microsoft.Win32;
 using System.Reflection;
 
-namespace VoiceTyping.Services;
+namespace NemoVoiceTyping.Services;
 
 public static class StartupRegistration
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ValueName = "VoiceTyping";
+    private const string ValueName = "NemoVoiceTyping";
 
     public static bool IsEnabled()
     {

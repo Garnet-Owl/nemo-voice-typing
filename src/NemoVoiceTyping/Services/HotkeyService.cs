@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 
-namespace VoiceTyping.Services;
+namespace NemoVoiceTyping.Services;
 
 /// <summary>
 /// Registers a single system-wide hotkey via Win32 RegisterHotKey and

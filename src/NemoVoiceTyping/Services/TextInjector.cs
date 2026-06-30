@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 
-namespace VoiceTyping.Services;
+namespace NemoVoiceTyping.Services;
 
 /// <summary>
 /// Injects text into whichever window currently has keyboard focus.

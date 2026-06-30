@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 
-namespace VoiceTyping.Config;
+namespace NemoVoiceTyping.Config;
 
 public sealed class AppConfig
 {
@@ -21,7 +21,7 @@ public sealed class AppConfig
 
     private static readonly string ConfigPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "VoiceTyping", "config.json");
+        "NemoVoiceTyping", "config.json");
 
     public static AppConfig Load()
     {

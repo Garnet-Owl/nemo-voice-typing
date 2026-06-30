@@ -27,7 +27,7 @@ static byte[] RenderPng(int s)
         using (var bg = new LinearGradientBrush(bgRect, Color.FromArgb(255, 122, 92, 255), Color.FromArgb(255, 86, 64, 220), 135f))
             g.FillPath(bg, path);
 
-        // Lightning bolt — bright yellow, behind mic
+        // Lightning bolt: bright yellow, behind mic
         var bolt = new PointF[] {
             new(s * 0.62f, s * 0.10f),
             new(s * 0.32f, s * 0.55f),

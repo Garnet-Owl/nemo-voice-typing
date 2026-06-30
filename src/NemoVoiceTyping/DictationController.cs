@@ -4,10 +4,10 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using VoiceTyping.Config;
-using VoiceTyping.Services;
+using NemoVoiceTyping.Config;
+using NemoVoiceTyping.Services;
 
-namespace VoiceTyping;
+namespace NemoVoiceTyping;
 
 /// <summary>
 /// Owns the dictation lifecycle: bridges <see cref="AudioCapture"/> →

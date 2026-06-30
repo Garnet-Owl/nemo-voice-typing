@@ -4,9 +4,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-using VoiceTyping.Config;
+using NemoVoiceTyping.Config;
 
-namespace VoiceTyping;
+namespace NemoVoiceTyping;
 
 public partial class FloatingPanel : Window
 {

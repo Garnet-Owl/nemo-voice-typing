@@ -1,7 +1,7 @@
 using System;
 using NAudio.Wave;
 
-namespace VoiceTyping.Services;
+namespace NemoVoiceTyping.Services;
 
 /// <summary>
 /// Captures 16 kHz mono PCM from the default microphone. Raises
