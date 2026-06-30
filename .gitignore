@@ -1,0 +1,30 @@
+# Build output
+bin/
+obj/
+out/
+publish/
+*.user
+*.suo
+*.userprefs
+
+# VS / Rider / VSCode
+.vs/
+.vscode/
+.idea/
+
+# NuGet
+packages/
+*.nupkg
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Model assets (large, distributed separately)
+models/
+*.onnx
+*.onnx.data
+
+# Local config / logs
+*.log
+appsettings.local.json
