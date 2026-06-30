@@ -25,6 +25,9 @@ models/
 *.onnx
 *.onnx.data
 
+# Tool caches
+.impeccable/
+
 # Local config / logs
 *.log
 appsettings.local.json

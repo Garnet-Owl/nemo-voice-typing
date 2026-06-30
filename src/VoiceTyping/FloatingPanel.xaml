@@ -1,0 +1,85 @@
+<Window x:Class="VoiceTyping.FloatingPanel"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Voice Typing"
+        Width="320" Height="84"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="True"
+        SizeToContent="Manual"
+        UseLayoutRounding="True"
+        TextOptions.TextRenderingMode="ClearType">
+    <Border CornerRadius="14"
+            Background="#F21E1F26"
+            BorderBrush="#33FFFFFF"
+            BorderThickness="1"
+            MouseLeftButtonDown="OnDragBegin">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="24" ShadowDepth="2" Opacity="0.45" Color="Black"/>
+        </Border.Effect>
+        <Grid Margin="14,10,12,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Mic button -->
+            <Button x:Name="MicButton"
+                    Grid.Column="0"
+                    Width="44" Height="44"
+                    Background="#3D6A5CFF"
+                    BorderBrush="#806A5CFF"
+                    BorderThickness="1"
+                    Foreground="White"
+                    FontSize="20"
+                    Cursor="Hand"
+                    Click="OnMicClick">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="22">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="#666A5CFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+                <TextBlock x:Name="MicGlyph" Text="🎤"/>
+            </Button>
+
+            <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                <TextBlock x:Name="StatusText"
+                           Text="Idle — press Ctrl+Alt+V"
+                           Foreground="#E6FFFFFF"
+                           FontSize="13"
+                           FontWeight="SemiBold"/>
+                <TextBlock x:Name="PartialText"
+                           Text=""
+                           Foreground="#99FFFFFF"
+                           FontSize="11"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
+
+            <Button Grid.Column="2"
+                    Width="22" Height="22"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Foreground="#99FFFFFF"
+                    Cursor="Hand"
+                    Click="OnCloseClick"
+                    ToolTip="Hide">
+                <TextBlock Text="✕" FontSize="12"/>
+            </Button>
+        </Grid>
+    </Border>
+</Window>
