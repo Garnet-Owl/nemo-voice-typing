@@ -42,7 +42,6 @@ public sealed class DictationProcessor
     // Research-backed sentence-boundary threshold: Google STT uses ~700ms,
     // Dragon NaturallySpeaking ~800ms. 800ms is the sweet spot that avoids
     // over-punctuating mid-thought pauses while still feeling responsive.
-    private static readonly TimeSpan AutoPeriodAfter = TimeSpan.FromMilliseconds(800);
     private static readonly TimeSpan CommandWindow = TimeSpan.FromMilliseconds(1500);
 
     // The model's own genai_config.json declares its VAD with
@@ -93,15 +92,9 @@ public sealed class DictationProcessor
     {
         var now = DateTime.UtcNow;
         // Word still in the buffer but no NEW sub-word piece has arrived for
-        // a long while: flush whatever we have. Streaming RNN-T can emit
-        // sub-word pieces of a single word ("▁punct", "uation") with
-        // surprisingly long gaps between them (the decoder waits for enough
-        // future audio context). Anything under ~1s risks tearing a word in
-        // half mid-decode, so we use 1500ms — long enough to never split a
-        // single word, short enough to flush the final word of a sentence
-        // before the user notices the lag. The 800ms auto-period heuristic
-        // still keys off _lastWordUtc, so end-of-sentence punctuation is
-        // unaffected.
+        // a while: flush whatever we have. Matched to the model's own VAD
+        // (genai_config.json silence_duration_ms = 3360) so we never tear a
+        // word mid-decode.
         if (_wordBuf.Length > 0 && now - _lastPieceUtc > BufferIdleFlush)
         {
             FlushWord();
@@ -112,23 +105,11 @@ public sealed class DictationProcessor
         {
             ClearPending(commit: true);
         }
-        // Long pause with no model-emitted punctuation: drop a period in.
-        // We *defer to the model first*: if the model produced ANY trailing
-        // punctuation (terminal . ? ! or even soft , ; :), we leave the text
-        // alone. The streaming nemotron model is prosody-aware and we only
-        // step in when it stayed completely silent on punctuation.
-        if (!_sentenceStart && _emitted.Count > 0 && now - _lastWordUtc > AutoPeriodAfter)
-        {
-            string last = _emitted[_emitted.Count - 1];
-            char lastChar = last.Length > 0 ? last[last.Length - 1] : '\0';
-            bool modelAlreadyPunctuated = lastChar is '.' or '?' or '!' or ',' or ';' or ':';
-            if (!modelAlreadyPunctuated)
-            {
-                TextInjector.Type(".");
-                _emitted[_emitted.Count - 1] = last + ".";
-                _sentenceStart = true;
-            }
-        }
+        // NB: no auto-period on pause. The streaming nemotron model emits
+        // its own '. ? !' tokens based on learned prosody, and any second-
+        // guessing on our side just produces wrong punctuation on natural
+        // mid-thought pauses. If the model stays silent on punctuation,
+        // the user can dictate "period" / "question mark" explicitly.
     }
 
     private void FlushWord()
