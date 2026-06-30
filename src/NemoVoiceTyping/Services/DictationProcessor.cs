@@ -109,6 +109,37 @@ public sealed class DictationProcessor
         if (raw.Length == 0) return;
 
         _lastWordUtc = DateTime.UtcNow;
+
+        // If the model emitted a pure-punctuation "word" (just "?" or "!"),
+        // treat it as the model's verdict on the previous sentence: if we
+        // had already auto-appended a weaker mark (e.g. "."), upgrade it
+        // rather than ending up with "sentence. ?". The model wins.
+        if (raw.Length > 0 && raw.IndexOfAny(new[] { 'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','0','1','2','3','4','5','6','7','8','9' }) < 0)
+        {
+            char mark = raw[0];
+            if (mark is '?' or '!' or '.' or ',' or ';' or ':' && _emitted.Count > 0)
+            {
+                string prev = _emitted[_emitted.Count - 1];
+                if (prev.Length > 0)
+                {
+                    char prevTail = prev[prev.Length - 1];
+                    // Upgrade weaker auto-punctuation to model's stronger choice.
+                    if (prevTail == '.' && mark is '?' or '!')
+                    {
+                        TextInjector.Backspace(1);
+                        TextInjector.Type(mark.ToString());
+                        _emitted[_emitted.Count - 1] = prev.Substring(0, prev.Length - 1) + mark;
+                        _sentenceStart = true;
+                        return;
+                    }
+                    // Same mark already there → swallow the duplicate.
+                    if (prevTail == mark) return;
+                }
+            }
+            AttachPunctuation(raw);
+            return;
+        }
+
         string lower = raw.ToLowerInvariant().Trim('.', ',', '?', '!', ';', ':');
 
         // --- two-word commands (second half arriving) -------------------
