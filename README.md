@@ -42,6 +42,28 @@ The pill stays on top so you can drag it wherever. Position is
 remembered between launches. Hotkey is configurable in
 `%APPDATA%\NemoVoiceTyping\config.json`.
 
+### Voice commands
+
+While dictating you can say any of these and they'll be acted on instead
+of typed verbatim. Spoken punctuation works in case the model itself
+misses a mark.
+
+| Say | What happens |
+|---|---|
+| "period" / "full stop" / "dot" | Inserts `.` |
+| "comma" | Inserts `,` |
+| "colon" / "semicolon" | Inserts `:` or `;` |
+| "question mark" | Inserts `?` |
+| "exclamation mark" / "exclamation point" | Inserts `!` |
+| "new line" | Inserts a line break |
+| "new paragraph" | Inserts a blank line |
+| "delete last" | Deletes the last word |
+| "scratch that" / "delete that" | Deletes the last sentence |
+
+Punctuation from the model itself is always respected. Capitalization
+at sentence starts is automatic, and mixed-case words like `iPhone`
+are left alone.
+
 ## System requirements
 
 * Windows 10 or 11, x64 (tested on Windows 11)
