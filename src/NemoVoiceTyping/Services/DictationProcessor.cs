@@ -32,7 +32,8 @@ public sealed class DictationProcessor
 {
     private readonly StringBuilder _wordBuf = new();
     private readonly List<string> _emitted = new(); // each entry is the exact substring we typed
-    private DateTime _lastWordUtc = DateTime.MinValue;
+    private DateTime _lastWordUtc = DateTime.MinValue;  // last FLUSHED word (drives auto-period)
+    private DateTime _lastPieceUtc = DateTime.MinValue; // last sub-word piece arriving (drives buffer flush)
     private bool _sentenceStart = true;
     private string? _pendingCommand;       // first half of a two-word command, e.g. "scratch"
     private string? _pendingCommandTyped;  // what we already typed for it (so we can undo)
@@ -52,6 +53,7 @@ public sealed class DictationProcessor
         _pendingCommand = null;
         _pendingCommandTyped = null;
         _lastWordUtc = DateTime.MinValue;
+        _lastPieceUtc = DateTime.MinValue;
     }
 
     /// <summary>Push a sub-word piece from the ASR.</summary>
@@ -66,14 +68,20 @@ public sealed class DictationProcessor
 
         if (clean.Length > 0)
             _wordBuf.Append(clean);
+
+        _lastPieceUtc = DateTime.UtcNow;
     }
 
     /// <summary>Called from a timer so pause-driven logic still fires.</summary>
     public void Tick()
     {
         var now = DateTime.UtcNow;
-        // Word still in the buffer with no follow-up: flush it as a word.
-        if (_wordBuf.Length > 0 && now - _lastWordUtc > TimeSpan.FromMilliseconds(280))
+        // Word still in the buffer but no NEW sub-word piece has arrived for
+        // a while: flush whatever we have as a word. We must gate on the
+        // last-piece time (not last-flushed-word time) so that long words
+        // decoded as multiple sub-word pieces ("punct" + "uation") aren't
+        // torn apart mid-emission.
+        if (_wordBuf.Length > 0 && now - _lastPieceUtc > TimeSpan.FromMilliseconds(350))
         {
             FlushWord();
         }
