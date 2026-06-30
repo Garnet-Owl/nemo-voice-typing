@@ -37,6 +37,8 @@ public static class TextInjector
     private const uint INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_KEYUP = 0x0002;
     private const uint KEYEVENTF_UNICODE = 0x0004;
+    private const ushort VK_BACK = 0x08;
+    private const ushort VK_RETURN = 0x0D;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
@@ -62,5 +64,33 @@ public static class TextInjector
             };
         }
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+    }
+
+    public static void Backspace(int count)
+    {
+        if (count <= 0) return;
+        var inputs = new INPUT[count * 2];
+        for (int i = 0; i < count; i++)
+        {
+            inputs[i * 2] = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_BACK, wScan = 0, dwFlags = 0 } }
+            };
+            inputs[i * 2 + 1] = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_BACK, wScan = 0, dwFlags = KEYEVENTF_KEYUP } }
+            };
+        }
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+    }
+
+    public static void PressEnter()
+    {
+        var inputs = new INPUT[2];
+        inputs[0] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_RETURN } } };
+        inputs[1] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_RETURN, dwFlags = KEYEVENTF_KEYUP } } };
+        SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
     }
 }

@@ -19,8 +19,10 @@ public sealed class DictationController : IDisposable
     private readonly AppConfig _config;
     private readonly FloatingPanel _panel;
     private readonly AudioCapture _audio = new();
+    private readonly DictationProcessor _processor = new();
     private NemoStreamingAsr? _asr;
     private Thread? _worker;
+    private System.Threading.Timer? _tickTimer;
     private readonly object _queueLock = new();
     private readonly Queue<float[]> _queue = new();
     private readonly ManualResetEventSlim _signal = new(false);
@@ -74,10 +76,23 @@ public sealed class DictationController : IDisposable
         }
 
         _asr.Reset();
+        _processor.Reset();
         _running = true;
 
-        _worker = new Thread(WorkerLoop) { IsBackground = true, Name = "ASR Worker" };
+        _worker = new Thread(WorkerLoop)
+        {
+            IsBackground = true,
+            Name = "ASR Worker",
+            Priority = ThreadPriority.AboveNormal,
+        };
         _worker.Start();
+
+        // Drive the post-processor's pause-based logic (auto period,
+        // pending-command timeout, dangling-word flush).
+        _tickTimer = new System.Threading.Timer(_ =>
+        {
+            try { _processor.Tick(); } catch { }
+        }, null, 100, 100);
 
         _audio.Start();
         _panel.SetListening(true);
@@ -128,6 +143,10 @@ public sealed class DictationController : IDisposable
         _signal.Set();
         _worker?.Join(500);
         _worker = null;
+        _tickTimer?.Dispose();
+        _tickTimer = null;
+        // One final tick so a dangling word or pending command gets resolved.
+        try { _processor.Tick(); } catch { }
         _panel.SetListening(false);
     }
 
@@ -167,11 +186,9 @@ public sealed class DictationController : IDisposable
 
     private void OnTokenEmitted(string piece)
     {
-        string text = piece.Length > 0 && piece[0] == '\u2581'
-            ? " " + piece.Substring(1)
-            : piece;
-        if (string.IsNullOrEmpty(text)) return;
-        TextInjector.Type(text);
+        // The processor owns word assembly, capitalisation, voice commands
+        // and auto-punctuation. It calls TextInjector itself.
+        _processor.Push(piece);
     }
 
     public void Dispose()
