@@ -1,0 +1,67 @@
+name: Build and release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Compute version
+        id: ver
+        shell: pwsh
+        run: |
+          $count = git rev-list --count HEAD
+          $sha = (git rev-parse --short HEAD)
+          $date = Get-Date -Format "yyyy.MM.dd"
+          $tag = "v0.1.$count"
+          echo "tag=$tag"      >> $env:GITHUB_OUTPUT
+          echo "title=$tag ($date, $sha)" >> $env:GITHUB_OUTPUT
+
+      - name: Publish single-file exe
+        shell: pwsh
+        run: |
+          dotnet publish src/NemoVoiceTyping/NemoVoiceTyping.csproj `
+            -c Release -r win-x64 --self-contained false `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o dist --nologo
+
+      - name: Rename asset for GitHub release
+        shell: pwsh
+        run: |
+          Copy-Item "dist/Nemo Voice Typing.exe" "dist/Nemo-Voice-Typing.exe"
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.ver.outputs.tag }}"
+          $title = "${{ steps.ver.outputs.title }}"
+          $notes = "Automated release from commit ${{ github.sha }}.`n`nSee the commit log for changes."
+          # Delete existing tag/release with the same name (idempotent re-runs)
+          gh release delete $tag --yes --cleanup-tag 2>$null
+          gh release create $tag "dist/Nemo-Voice-Typing.exe" `
+            --target ${{ github.sha }} `
+            --title $title `
+            --notes $notes `
+            --latest
