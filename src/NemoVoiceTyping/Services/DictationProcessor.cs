@@ -45,6 +45,22 @@ public sealed class DictationProcessor
     private static readonly TimeSpan AutoPeriodAfter = TimeSpan.FromMilliseconds(800);
     private static readonly TimeSpan CommandWindow = TimeSpan.FromMilliseconds(1500);
 
+    // The model's own genai_config.json declares its VAD with
+    // silence_duration_ms = 3360, i.e. the streaming model itself does not
+    // consider an utterance ended until 3.36 seconds of silence have passed.
+    // We mirror that here: never flush the buffer mid-decode based on a
+    // tighter heuristic than the model's own design. This eliminates the
+    // word-splitting bug ("punct uation", "split ting") entirely.
+    // End-of-utterance lag is bounded by this value; Stop() does an
+    // immediate FlushBuffer so toggling dictation off feels snappy.
+    private static readonly TimeSpan BufferIdleFlush = TimeSpan.FromMilliseconds(3360);
+
+    public void FlushBuffer()
+    {
+        if (_wordBuf.Length > 0) FlushWord();
+        if (_pendingCommand != null) ClearPending(commit: true);
+    }
+
     public void Reset()
     {
         _wordBuf.Clear();
@@ -86,7 +102,7 @@ public sealed class DictationProcessor
         // before the user notices the lag. The 800ms auto-period heuristic
         // still keys off _lastWordUtc, so end-of-sentence punctuation is
         // unaffected.
-        if (_wordBuf.Length > 0 && now - _lastPieceUtc > TimeSpan.FromMilliseconds(1500))
+        if (_wordBuf.Length > 0 && now - _lastPieceUtc > BufferIdleFlush)
         {
             FlushWord();
         }

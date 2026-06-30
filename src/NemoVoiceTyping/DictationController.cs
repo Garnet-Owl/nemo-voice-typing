@@ -145,7 +145,10 @@ public sealed class DictationController : IDisposable
         _worker = null;
         _tickTimer?.Dispose();
         _tickTimer = null;
-        // One final tick so a dangling word or pending command gets resolved.
+        // Drain whatever the processor is still holding so toggling off
+        // doesn't leave the last word stuck in the buffer waiting for the
+        // 3.36s VAD threshold to elapse.
+        try { _processor.FlushBuffer(); } catch { }
         try { _processor.Tick(); } catch { }
         _panel.SetListening(false);
     }
