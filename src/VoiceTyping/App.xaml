@@ -17,7 +17,7 @@
                 <MenuItem Header="Exit" Click="OnExit"/>
             </ContextMenu>
             <tb:TaskbarIcon x:Key="TrayIcon"
-                            ToolTipText="Voice Typing — Ctrl+Alt+A"
+                            ToolTipText="Nemo Voice Typing — Ctrl+Alt+A"
                             ContextMenu="{StaticResource TrayMenu}"
                             TrayLeftMouseUp="OnTrayLeftClick"/>
         </ResourceDictionary>

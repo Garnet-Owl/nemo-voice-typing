@@ -1,4 +1,4 @@
-# Voice Typing
+# Nemo Voice Typing
 
 Tiny Windows tray app that lets you dictate into any focused text field.
 Press **Ctrl+Alt+A**, talk, the words appear where your cursor is.

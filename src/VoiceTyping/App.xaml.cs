@@ -24,7 +24,7 @@ public partial class App : System.Windows.Application
         _singleInstance = new Mutex(initiallyOwned: true, "Global\\VoiceTyping.SingleInstance", out var createdNew);
         if (!createdNew)
         {
-            MessageBox.Show("Voice Typing is already running.", "Voice Typing",
+            MessageBox.Show("Nemo Voice Typing is already running.", "Nemo Voice Typing",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             Shutdown();
             return;
@@ -48,7 +48,7 @@ public partial class App : System.Windows.Application
         if (!_hotkey.Register(_panel, _config.Hotkey))
         {
             MessageBox.Show($"Could not register hotkey '{_config.Hotkey}'. It may be in use.",
-                "Voice Typing", MessageBoxButton.OK, MessageBoxImage.Warning);
+                "Nemo Voice Typing", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         _dictation = new DictationController(_config, _panel);

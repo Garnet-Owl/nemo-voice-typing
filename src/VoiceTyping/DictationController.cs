@@ -62,7 +62,7 @@ public sealed class DictationController : IDisposable
             catch (Exception ex)
             {
                 MessageBox.Show("Failed to load ASR model:\n" + ex.Message,
-                    "Voice Typing", MessageBoxButton.OK, MessageBoxImage.Error);
+                    "Nemo Voice Typing", MessageBoxButton.OK, MessageBoxImage.Error);
                 _panel.SetLoading(false);
                 return;
             }
@@ -116,7 +116,7 @@ public sealed class DictationController : IDisposable
         {
             MessageBox.Show("Could not download the speech model:\n" + ex.Message
                 + "\n\nCheck your internet connection and try again.",
-                "Voice Typing", MessageBoxButton.OK, MessageBoxImage.Error);
+                "Nemo Voice Typing", MessageBoxButton.OK, MessageBoxImage.Error);
             return null;
         }
     }
