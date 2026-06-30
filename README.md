@@ -51,9 +51,7 @@ remembered between launches. Hotkey is configurable in
 
 ## Demo
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/k6MXKX_60T0" title="Nemo Voice Typing Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-
-Watch the app in action on YouTube above.
+[![Nemo Voice Typing Demo](https://img.youtube.com/vi/k6MXKX_60T0/maxresdefault.jpg)](https://www.youtube.com/watch?v=k6MXKX_60T0)
 
 ### Voice commands
 
