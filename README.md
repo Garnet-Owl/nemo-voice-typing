@@ -16,7 +16,7 @@ telemetry. One evening of hacking, here it is.
 
 ## Install
 
-1. Grab `NemoVoiceTyping.exe` from
+1. Grab `Nemo Voice Typing.exe` from
    [Releases](https://github.com/Garnet-Owl/nemo-voice-typing/releases),
    or build from source (see below).
 2. Double-click to run. A small pill appears on the right edge of the
@@ -61,7 +61,7 @@ dotnet publish src/NemoVoiceTyping/NemoVoiceTyping.csproj -c Release -r win-x64 
     -p:IncludeNativeLibrariesForSelfExtract=true -o dist
 ```
 
-The single-file exe lands in `dist\NemoVoiceTyping.exe`.
+The single-file exe lands in `dist\Nemo Voice Typing.exe`.
 
 ## Stack
 
