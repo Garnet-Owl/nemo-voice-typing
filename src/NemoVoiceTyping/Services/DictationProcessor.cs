@@ -44,15 +44,14 @@ public sealed class DictationProcessor
     // over-punctuating mid-thought pauses while still feeling responsive.
     private static readonly TimeSpan CommandWindow = TimeSpan.FromMilliseconds(1500);
 
-    // The model's own genai_config.json declares its VAD with
-    // silence_duration_ms = 3360, i.e. the streaming model itself does not
-    // consider an utterance ended until 3.36 seconds of silence have passed.
-    // We mirror that here: never flush the buffer mid-decode based on a
-    // tighter heuristic than the model's own design. This eliminates the
-    // word-splitting bug ("punct uation", "split ting") entirely.
-    // End-of-utterance lag is bounded by this value; Stop() does an
-    // immediate FlushBuffer so toggling dictation off feels snappy.
-    private static readonly TimeSpan BufferIdleFlush = TimeSpan.FromMilliseconds(3360);
+    // Buffer-idle flush threshold. Sub-word pieces of a single word arrive
+    // at chunk-completion boundaries (the model processes audio in 560ms
+    // chunks per genai_config.json), so consecutive pieces of one word are
+    // ≤560ms apart in practice. 1200ms gives us ~2 chunks of headroom for
+    // CPU jitter while keeping end-of-utterance latency around 1s. The
+    // model's own VAD endpoint (silence_duration_ms = 3360) is much longer
+    // because it's deciding utterance boundaries, not word completion.
+    private static readonly TimeSpan BufferIdleFlush = TimeSpan.FromMilliseconds(1200);
 
     public void FlushBuffer()
     {
