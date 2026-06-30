@@ -20,6 +20,7 @@ public partial class FloatingPanel : Window
 
     public event Action? ToggleRequested;
     public event Action? ExitRequested;
+    public event Action<string>? StatusChanged;
 
     public FloatingPanel(AppConfig config)
     {
@@ -118,11 +119,17 @@ public partial class FloatingPanel : Window
         {
             _loadingTimer.Stop();
             LoadingText.Visibility = Visibility.Collapsed;
+            LoadingText.Text = "";
             foreach (var b in _bars) b.Opacity = 1;
+            StatusChanged?.Invoke("");
         }
     }
 
-    public void SetLoadingText(string text) => LoadingText.Text = text;
+    public void SetLoadingText(string text)
+    {
+        LoadingText.Text = text;
+        StatusChanged?.Invoke(text);
+    }
 
     private void PulseLoading()
     {

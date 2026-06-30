@@ -40,6 +40,15 @@ public partial class App : System.Windows.Application
         _panel = new FloatingPanel(_config);
         _panel.ToggleRequested += ToggleDictation;
         _panel.ExitRequested += () => Shutdown();
+        _panel.StatusChanged += text =>
+        {
+            // Mirror download / loading status into the tray tooltip so the
+            // user can see progress without having to look at the pill.
+            if (_tray == null) return;
+            _tray.ToolTipText = string.IsNullOrEmpty(text)
+                ? "Nemo Voice Typing (Ctrl+Alt+A)"
+                : $"Nemo Voice Typing — {text}";
+        };
         _panel.Show();
         _panel.Hide();
 
