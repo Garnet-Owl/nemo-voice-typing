@@ -29,8 +29,11 @@
     Wipe the publish output directory before each publish so we never
     accumulate stale binaries from prior runs (e.g. when the exe was
     renamed, the old name otherwise stays behind).
+
+    `PrepareForPublish` runs before any file is copied into the output
+    directory, which is the correct hook for a pre-publish clean.
   -->
-  <Target Name="CleanPublishDir" BeforeTargets="Publish" Condition="'$(PublishDir)' != ''">
+  <Target Name="CleanPublishDir" BeforeTargets="PrepareForPublish" Condition="'$(PublishDir)' != ''">
     <ItemGroup>
       <_StalePublishFiles Include="$(PublishDir)**\*" />
     </ItemGroup>
