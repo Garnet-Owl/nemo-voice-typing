@@ -77,11 +77,16 @@ public sealed class DictationProcessor
     {
         var now = DateTime.UtcNow;
         // Word still in the buffer but no NEW sub-word piece has arrived for
-        // a while: flush whatever we have as a word. We must gate on the
-        // last-piece time (not last-flushed-word time) so that long words
-        // decoded as multiple sub-word pieces ("punct" + "uation") aren't
-        // torn apart mid-emission.
-        if (_wordBuf.Length > 0 && now - _lastPieceUtc > TimeSpan.FromMilliseconds(350))
+        // a long while: flush whatever we have. Streaming RNN-T can emit
+        // sub-word pieces of a single word ("▁punct", "uation") with
+        // surprisingly long gaps between them (the decoder waits for enough
+        // future audio context). Anything under ~1s risks tearing a word in
+        // half mid-decode, so we use 1500ms — long enough to never split a
+        // single word, short enough to flush the final word of a sentence
+        // before the user notices the lag. The 800ms auto-period heuristic
+        // still keys off _lastWordUtc, so end-of-sentence punctuation is
+        // unaffected.
+        if (_wordBuf.Length > 0 && now - _lastPieceUtc > TimeSpan.FromMilliseconds(1500))
         {
             FlushWord();
         }
