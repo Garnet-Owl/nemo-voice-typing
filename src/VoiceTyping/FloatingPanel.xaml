@@ -71,6 +71,13 @@
                 <Rectangle x:Name="Bar3" Width="3" Height="4" Margin="2,0" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource BarBrush}"/>
                 <Rectangle x:Name="Bar4" Width="3" Height="4" Margin="2,0" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource BarBrush}"/>
             </StackPanel>
+
+            <TextBlock x:Name="LoadingText"
+                       Text=""
+                       Foreground="#CCFFFFFF"
+                       FontSize="10"
+                       Margin="6,0,2,0"
+                       VerticalAlignment="Center"/>
         </StackPanel>
     </Border>
 </Window>

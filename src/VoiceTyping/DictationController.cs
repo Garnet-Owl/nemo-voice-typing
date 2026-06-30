@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using VoiceTyping.Config;
 using VoiceTyping.Services;
@@ -10,7 +11,8 @@ namespace VoiceTyping;
 
 /// <summary>
 /// Owns the dictation lifecycle: bridges <see cref="AudioCapture"/> →
-/// <see cref="NemoStreamingAsr"/> → <see cref="TextInjector"/>.
+/// <see cref="NemoStreamingAsr"/> → <see cref="TextInjector"/>, and lazily
+/// downloads the model from Hugging Face on first use.
 /// </summary>
 public sealed class DictationController : IDisposable
 {
@@ -23,6 +25,7 @@ public sealed class DictationController : IDisposable
     private readonly Queue<float[]> _queue = new();
     private readonly ManualResetEventSlim _signal = new(false);
     private volatile bool _running;
+    private volatile bool _loading;
 
     public DictationController(AppConfig config, FloatingPanel panel)
     {
@@ -38,30 +41,35 @@ public sealed class DictationController : IDisposable
 
     public void Toggle()
     {
+        if (_loading) return;
         if (_running) Stop();
-        else Start();
+        else _ = StartAsync();
     }
 
-    private void Start()
+    private async Task StartAsync()
     {
         if (_asr == null)
         {
-            if (!Directory.Exists(_config.ModelDirectory))
-            {
-                MessageBox.Show("Model not found:\n" + _config.ModelDirectory,
-                    "Voice Typing", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            _loading = true;
+            _panel.SetLoading(true);
             try
             {
-                _asr = new NemoStreamingAsr(_config.ModelDirectory);
+                var modelDir = await EnsureModelAsync().ConfigureAwait(true);
+                if (modelDir == null) { _panel.SetLoading(false); return; }
+                _asr = await Task.Run(() => new NemoStreamingAsr(modelDir)).ConfigureAwait(true);
                 _asr.TokenEmitted += OnTokenEmitted;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Failed to load ASR model:\n" + ex.Message,
                     "Voice Typing", MessageBoxButton.OK, MessageBoxImage.Error);
+                _panel.SetLoading(false);
                 return;
+            }
+            finally
+            {
+                _loading = false;
+                _panel.SetLoading(false);
             }
         }
 
@@ -73,6 +81,44 @@ public sealed class DictationController : IDisposable
 
         _audio.Start();
         _panel.SetListening(true);
+    }
+
+    /// <summary>
+    /// Returns a usable model directory, downloading from Hugging Face if needed.
+    /// Priority: explicit ModelDirectory config (if it exists), then the per-user
+    /// cache under %LOCALAPPDATA%\VoiceTyping\models\...
+    /// </summary>
+    private async Task<string?> EnsureModelAsync()
+    {
+        if (!string.IsNullOrEmpty(_config.ModelDirectory)
+            && Directory.Exists(_config.ModelDirectory)
+            && File.Exists(Path.Combine(_config.ModelDirectory, "encoder.onnx")))
+        {
+            return _config.ModelDirectory;
+        }
+
+        var dl = new ModelDownloader();
+        if (dl.IsComplete()) return dl.CacheDir;
+
+        var progress = new Progress<(int file, int totalFiles, long received, long total)>(p =>
+        {
+            string pct = p.total > 0 ? $" {p.received * 100 / Math.Max(1, p.total)}%" : "";
+            _panel.SetLoadingText($"Downloading model {p.file + 1}/{p.totalFiles}{pct}");
+        });
+
+        try
+        {
+            _panel.SetLoadingText("Downloading model…");
+            await dl.DownloadAsync(progress, CancellationToken.None).ConfigureAwait(true);
+            return dl.CacheDir;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Could not download the speech model:\n" + ex.Message
+                + "\n\nCheck your internet connection and try again.",
+                "Voice Typing", MessageBoxButton.OK, MessageBoxImage.Error);
+            return null;
+        }
     }
 
     private void Stop()

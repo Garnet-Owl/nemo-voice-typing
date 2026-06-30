@@ -14,7 +14,9 @@ public partial class FloatingPanel : Window
     private bool _listening;
     private readonly Rectangle[] _bars;
     private readonly DispatcherTimer _decayTimer;
+    private readonly DispatcherTimer _loadingTimer;
     private double _currentLevel;
+    private double _loadingPhase;
 
     public event Action? ToggleRequested;
     public event Action? ExitRequested;
@@ -35,6 +37,14 @@ public partial class FloatingPanel : Window
             Interval = TimeSpan.FromMilliseconds(33),
         };
         _decayTimer.Tick += (_, _) => Decay();
+
+        _loadingTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(33),
+        };
+        _loadingTimer.Tick += (_, _) => PulseLoading();
+
+        LoadingText.Visibility = Visibility.Collapsed;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -94,6 +104,34 @@ public partial class FloatingPanel : Window
             _decayTimer.Stop();
             _currentLevel = 0;
             foreach (var b in _bars) b.Height = 4;
+        }
+    }
+
+    public void SetLoading(bool loading)
+    {
+        if (loading)
+        {
+            LoadingText.Visibility = Visibility.Visible;
+            _loadingTimer.Start();
+        }
+        else
+        {
+            _loadingTimer.Stop();
+            LoadingText.Visibility = Visibility.Collapsed;
+            foreach (var b in _bars) b.Opacity = 1;
+        }
+    }
+
+    public void SetLoadingText(string text) => LoadingText.Text = text;
+
+    private void PulseLoading()
+    {
+        _loadingPhase += 0.14;
+        for (int i = 0; i < _bars.Length; i++)
+        {
+            var op = 0.4 + 0.6 * (0.5 + 0.5 * Math.Sin(_loadingPhase - i * 0.7));
+            _bars[i].Opacity = op;
+            _bars[i].Height = 10;
         }
     }
 

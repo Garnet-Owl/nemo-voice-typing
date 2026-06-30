@@ -6,11 +6,12 @@ namespace VoiceTyping.Config;
 
 public sealed class AppConfig
 {
-    public string ModelDirectory { get; set; } =
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            "Desktop", "personal-dev-ops", "nemo-voice-typing",
-            "models", "nemotron-speech-streaming-en-0.6b-generic-cpu-3", "v3");
+    /// <summary>
+    /// Optional override for the model directory. Empty means "use the
+    /// per-user cache under %LOCALAPPDATA%\VoiceTyping\models\..." and
+    /// download from Hugging Face if missing.
+    /// </summary>
+    public string ModelDirectory { get; set; } = "";
 
     public string Hotkey { get; set; } = "Ctrl+Alt+A";
     public bool RunAtStartup { get; set; } = false;
