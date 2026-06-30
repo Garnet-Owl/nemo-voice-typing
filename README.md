@@ -1,5 +1,7 @@
 # Nemo Voice Typing
 
+![Nemo Voice Typing](src/NemoVoiceTyping/Assets/app.ico)
+
 A small Windows tray app for dictating into any focused text field.
 Press **Ctrl+Alt+A**, speak, and the words appear where your cursor is.
 Speech recognition runs locally on the CPU using NVIDIA's NeMo streaming
