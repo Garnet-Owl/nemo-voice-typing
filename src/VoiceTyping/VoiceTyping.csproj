@@ -9,9 +9,14 @@
     <RootNamespace>VoiceTyping</RootNamespace>
     <AssemblyName>VoiceTyping</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
