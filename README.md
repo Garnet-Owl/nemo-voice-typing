@@ -78,7 +78,7 @@ are left alone.
 ## System requirements
 
 * Windows 10 or 11, x64 (tested on Windows 11)
-* About 1.5 GB of RAM while dictating (model plus ONNX runtime)
+* RAM usage is around 800 MB (model plus ONNX runtime)
 * Any modern x86-64 CPU with AVX2. No GPU needed.
 * .NET 8 desktop runtime (Windows prompts to install it on first launch
   if missing).
