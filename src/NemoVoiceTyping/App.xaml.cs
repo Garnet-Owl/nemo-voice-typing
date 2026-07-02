@@ -71,6 +71,7 @@ public partial class App : System.Windows.Application
 
     private void OnShowPanel(object sender, RoutedEventArgs e) => _panel?.Show();
     private void OnToggleDictation(object sender, RoutedEventArgs e) => ToggleDictation();
+    private void OnOpenPersonalDictionary(object sender, RoutedEventArgs e) => _dictation?.OpenPersonalDictionary();
 
     private void OnTrayLeftClick(object sender, RoutedEventArgs e)
     {

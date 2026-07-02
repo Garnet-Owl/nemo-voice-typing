@@ -8,6 +8,7 @@
             <ContextMenu x:Key="TrayMenu">
                 <MenuItem Header="Show panel" Click="OnShowPanel"/>
                 <MenuItem Header="Toggle dictation" Click="OnToggleDictation"/>
+                <MenuItem Header="Personal dictionary..." Click="OnOpenPersonalDictionary"/>
                 <Separator/>
                 <MenuItem Header="Start with Windows"
                           x:Name="StartupMenu"

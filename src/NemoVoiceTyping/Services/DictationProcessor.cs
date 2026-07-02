@@ -32,6 +32,7 @@ public sealed class DictationProcessor
 {
     private readonly StringBuilder _wordBuf = new();
     private readonly List<string> _emitted = new(); // each entry is the exact substring we typed
+    private readonly PersonalDictionary? _dictionary;
     private DateTime _lastWordUtc = DateTime.MinValue;  // last FLUSHED word (drives auto-period)
     private DateTime _lastPieceUtc = DateTime.MinValue; // last sub-word piece arriving (drives buffer flush)
     private bool _sentenceStart = true;
@@ -52,6 +53,11 @@ public sealed class DictationProcessor
     // model's own VAD endpoint (silence_duration_ms = 3360) is much longer
     // because it's deciding utterance boundaries, not word completion.
     private static readonly TimeSpan BufferIdleFlush = TimeSpan.FromMilliseconds(1200);
+
+    public DictationProcessor(PersonalDictionary? dictionary = null)
+    {
+        _dictionary = dictionary;
+    }
 
     public void FlushBuffer()
     {
@@ -229,7 +235,23 @@ public sealed class DictationProcessor
         }
 
         // --- ordinary word --------------------------------------------
-        TypeWord(raw);
+        TypeWord(ApplyPersonalDictionary(raw));
+    }
+
+    /// <summary>Runs the recognized word through the on-device personal
+    /// dictionary (exact corrections + fuzzy hotword matching), preserving
+    /// any trailing punctuation the model attached to the word.</summary>
+    private string ApplyPersonalDictionary(string raw)
+    {
+        if (_dictionary == null) return raw;
+
+        int end = raw.Length;
+        while (end > 0 && ".,!?;:".IndexOf(raw[end - 1]) >= 0) end--;
+        if (end == 0) return raw; // pure punctuation, nothing to correct
+
+        string core = raw.Substring(0, end);
+        string trailing = raw.Substring(end);
+        return _dictionary.TryCorrect(core, out var corrected) ? corrected + trailing : raw;
     }
 
     /// <summary>Inserts the word into the focused window with leading space

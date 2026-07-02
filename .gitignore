@@ -31,3 +31,4 @@ models/
 # Local config / logs
 *.log
 appsettings.local.json
+/dist/

@@ -19,7 +19,8 @@ public sealed class DictationController : IDisposable
     private readonly AppConfig _config;
     private readonly FloatingPanel _panel;
     private readonly AudioCapture _audio = new();
-    private readonly DictationProcessor _processor = new();
+    private readonly PersonalDictionary _dictionary = new();
+    private readonly DictationProcessor _processor;
     private NemoStreamingAsr? _asr;
     private Thread? _worker;
     private System.Threading.Timer? _tickTimer;
@@ -29,6 +30,7 @@ public sealed class DictationController : IDisposable
     private volatile bool _running;
     private volatile bool _loading;
     private long _lastActivityTicks;
+    private PersonalDictionaryWindow? _dictWindow;
 
     // Native Windows voice typing behaves the same way: it only listens
     // while you're actively using it and drops the mic after a spell of
@@ -41,6 +43,7 @@ public sealed class DictationController : IDisposable
     {
         _config = config;
         _panel = panel;
+        _processor = new DictationProcessor(_dictionary);
         _audio.SamplesAvailable += OnSamples;
         _audio.LevelAvailable += level =>
         {
@@ -52,7 +55,7 @@ public sealed class DictationController : IDisposable
     public void Toggle()
     {
         if (_loading) return;
-        if (_running) Stop();
+        if (_running) Stop(StopReason.Manual);
         else _ = StartAsync();
     }
 
@@ -85,6 +88,7 @@ public sealed class DictationController : IDisposable
 
         _asr.Reset();
         _processor.Reset();
+        _dictionary.ReloadIfChanged();
         _running = true;
         Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
 
@@ -109,7 +113,7 @@ public sealed class DictationController : IDisposable
                 {
                     _panel.Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        if (_running) Stop();
+                        if (_running) Stop(StopReason.Idle);
                     }));
                 }
             }
@@ -117,6 +121,7 @@ public sealed class DictationController : IDisposable
 
         _audio.Start();
         _panel.SetListening(true);
+        SoundCues.PlayStart();
     }
 
     /// <summary>
@@ -157,7 +162,9 @@ public sealed class DictationController : IDisposable
         }
     }
 
-    private void Stop()
+    private enum StopReason { Manual, Idle, Shutdown }
+
+    private void Stop(StopReason reason = StopReason.Manual)
     {
         _running = false;
         _audio.Stop();
@@ -172,6 +179,13 @@ public sealed class DictationController : IDisposable
         try { _processor.FlushBuffer(); } catch { }
         try { _processor.Tick(); } catch { }
         _panel.SetListening(false);
+
+        switch (reason)
+        {
+            case StopReason.Manual: SoundCues.PlayManualStop(); break;
+            case StopReason.Idle: SoundCues.PlayIdleStop(); break;
+            // Shutdown: silent — no need for a chime on app exit.
+        }
     }
 
     private void OnSamples(float[] buf)
@@ -208,6 +222,22 @@ public sealed class DictationController : IDisposable
         lock (_queueLock) return _queue.Count > 0;
     }
 
+    /// <summary>Opens the personal dictionary editor — a small point-and-click
+    /// window (add a word, or a "heard → meant" pair, remove with ✕). Reuses
+    /// the same window instance if it's already open.</summary>
+    public void OpenPersonalDictionary()
+    {
+        if (_dictWindow != null)
+        {
+            _dictWindow.Activate();
+            return;
+        }
+        _dictWindow = new PersonalDictionaryWindow(_dictionary);
+        _dictWindow.Closed += (_, _) => _dictWindow = null;
+        _dictWindow.Show();
+        _dictWindow.Activate();
+    }
+
     private void OnTokenEmitted(string piece)
     {
         // Recognized speech counts as activity; reset the idle-timeout clock.
@@ -219,7 +249,7 @@ public sealed class DictationController : IDisposable
 
     public void Dispose()
     {
-        Stop();
+        Stop(StopReason.Shutdown);
         _audio.Dispose();
         _asr?.Dispose();
         _signal.Dispose();

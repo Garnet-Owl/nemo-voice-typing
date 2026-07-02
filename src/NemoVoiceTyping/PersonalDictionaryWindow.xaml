@@ -1,0 +1,179 @@
+<Window x:Class="NemoVoiceTyping.PersonalDictionaryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Personal Dictionary — Nemo Voice Typing"
+        Width="460" Height="600"
+        MinWidth="400" MinHeight="440"
+        WindowStartupLocation="CenterScreen"
+        Background="#1A1B22"
+        FontFamily="Segoe UI">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Accent" Color="#6A5CFF"/>
+        <SolidColorBrush x:Key="Danger" Color="#E25C5C"/>
+        <SolidColorBrush x:Key="Fg" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="FgDim" Color="#AAFFFFFF"/>
+        <SolidColorBrush x:Key="FieldBg" Color="#2A2B33"/>
+        <SolidColorBrush x:Key="FieldBorder" Color="#3A3B44"/>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{StaticResource FieldBg}"/>
+            <Setter Property="Foreground" Value="{StaticResource Fg}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource FieldBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="CaretBrush" Value="White"/>
+        </Style>
+
+        <Style x:Key="AddButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DeleteButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="ToolTip" Value="Remove"/>
+        </Style>
+
+        <Style x:Key="CloseButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource FieldBg}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border Background="{TemplateBinding Background}" Padding="4,3">
+                            <ContentPresenter/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="60"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*" MinHeight="60"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="Teach it your words" FontSize="17" FontWeight="Bold" Foreground="{StaticResource Fg}"/>
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource FgDim}" FontSize="11.5" Margin="0,4,0,0"
+                       Text="Add names, places, or terms Nemo keeps mishearing. Changes apply the next time you start dictating (Ctrl+Alt+A) — no restart needed."/>
+        </StackPanel>
+
+        <!-- Hotwords section -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,6">
+            <TextBlock Text="Words you say a lot" FontSize="13.5" FontWeight="Bold" Foreground="{StaticResource Fg}"/>
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource FgDim}" FontSize="11" Margin="0,2,0,8"
+                       Text="If dictation hears something close but not quite right, it auto-corrects to the exact spelling below (e.g. add &quot;Nairobi&quot; so &quot;nairobbi&quot; gets fixed)."/>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Add" Style="{StaticResource AddButton}" Click="OnAddHotword" Margin="6,0,0,0"/>
+                <TextBox x:Name="HotwordInput" KeyDown="OnHotwordInputKeyDown"/>
+            </DockPanel>
+        </StackPanel>
+
+        <Border Grid.Row="2" Background="#14151B" CornerRadius="6" Margin="0,0,0,14">
+            <ListBox x:Name="HotwordList" Background="Transparent" BorderThickness="0"
+                     Padding="6" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding}" VerticalAlignment="Center" Foreground="#FFFFFFFF"/>
+                            <Button Grid.Column="1" Content="✕" Style="{StaticResource DeleteButton}" Click="OnRemoveHotword" Tag="{Binding}"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <!-- Corrections section -->
+        <StackPanel Grid.Row="3" Margin="0,0,0,6">
+            <TextBlock Text="Exact corrections" FontSize="13.5" FontWeight="Bold" Foreground="{StaticResource Fg}"/>
+            <TextBlock TextWrapping="Wrap" Foreground="{StaticResource FgDim}" FontSize="11" Margin="0,2,0,8"
+                       Text="Pick a word it types by mistake and what you meant instead — this always wins over the fuzzy matching above."/>
+        </StackPanel>
+
+        <Grid Grid.Row="4" Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="HeardInput" Grid.Column="0" ToolTip="What it types by mistake"/>
+            <TextBlock Grid.Column="1" Text="→" Foreground="{StaticResource FgDim}" Margin="8,0" VerticalAlignment="Center"/>
+            <TextBox x:Name="CorrectInput" Grid.Column="2" ToolTip="What you meant" KeyDown="OnCorrectionInputKeyDown"/>
+            <Button Grid.Column="3" Content="Add" Style="{StaticResource AddButton}" Click="OnAddCorrection" Margin="8,0,0,0"/>
+        </Grid>
+
+        <Border Grid.Row="5" Background="#14151B" CornerRadius="6">
+            <ListBox x:Name="CorrectionList" Background="Transparent" BorderThickness="0"
+                     Padding="6" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Wrong}" Foreground="#FFFFFFFF" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Column="1" Text="→" Foreground="{StaticResource FgDim}" Margin="8,0" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="{Binding Right}" Foreground="#FFFFFFFF" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            <Button Grid.Column="3" Content="✕" Style="{StaticResource DeleteButton}" Click="OnRemoveCorrection" Tag="{Binding Wrong}"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="Close" Style="{StaticResource CloseButton}" Click="OnClose"/>
+        </StackPanel>
+    </Grid>
+</Window>
