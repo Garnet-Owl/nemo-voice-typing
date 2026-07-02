@@ -49,6 +49,12 @@ The pill stays on top so you can drag it wherever. Position is
 remembered between launches. Hotkey is configurable in
 `%APPDATA%\NemoVoiceTyping\config.json`.
 
+* **Auto-off on silence** — like Windows' own voice typing, the mic only
+  listens while you're actually using it: if it doesn't recognize any
+  speech for about 30 seconds, dictation stops on its own so it isn't
+  burning CPU (or picking up other audio) after you've moved on. Just
+  click the mic or hit the hotkey again to resume.
+
 ## Demo
 
 [![Nemo Voice Typing Demo](https://img.youtube.com/vi/k6MXKX_60T0/maxresdefault.jpg)](https://www.youtube.com/watch?v=k6MXKX_60T0)

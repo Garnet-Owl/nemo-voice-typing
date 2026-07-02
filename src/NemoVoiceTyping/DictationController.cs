@@ -28,6 +28,14 @@ public sealed class DictationController : IDisposable
     private readonly ManualResetEventSlim _signal = new(false);
     private volatile bool _running;
     private volatile bool _loading;
+    private long _lastActivityTicks;
+
+    // Native Windows voice typing behaves the same way: it only listens
+    // while you're actively using it and drops the mic after a spell of
+    // silence. Auto-stopping after a minute of no recognized speech keeps
+    // us from burning a CPU core all day and avoids accidentally
+    // transcribing whatever's said/played after the user tabs away.
+    private static readonly TimeSpan IdleTimeout = TimeSpan.FromSeconds(30);
 
     public DictationController(AppConfig config, FloatingPanel panel)
     {
@@ -78,6 +86,7 @@ public sealed class DictationController : IDisposable
         _asr.Reset();
         _processor.Reset();
         _running = true;
+        Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
 
         _worker = new Thread(WorkerLoop)
         {
@@ -88,10 +97,22 @@ public sealed class DictationController : IDisposable
         _worker.Start();
 
         // Drive the post-processor's pause-based logic (auto period,
-        // pending-command timeout, dangling-word flush).
+        // pending-command timeout, dangling-word flush), and watch for a
+        // full minute of no recognized speech so we can auto-stop.
         _tickTimer = new System.Threading.Timer(_ =>
         {
             try { _processor.Tick(); } catch { }
+            if (_running)
+            {
+                var idleFor = DateTime.UtcNow - new DateTime(Interlocked.Read(ref _lastActivityTicks));
+                if (idleFor > IdleTimeout)
+                {
+                    _panel.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        if (_running) Stop();
+                    }));
+                }
+            }
         }, null, 100, 100);
 
         _audio.Start();
@@ -189,6 +210,8 @@ public sealed class DictationController : IDisposable
 
     private void OnTokenEmitted(string piece)
     {
+        // Recognized speech counts as activity; reset the idle-timeout clock.
+        Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
         // The processor owns word assembly, capitalisation, voice commands
         // and auto-punctuation. It calls TextInjector itself.
         _processor.Push(piece);
