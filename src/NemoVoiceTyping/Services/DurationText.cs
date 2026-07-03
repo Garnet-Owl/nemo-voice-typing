@@ -11,7 +11,7 @@ namespace NemoVoiceTyping.Services;
 public static class DurationText
 {
     public const int MinSeconds = 5;
-    public const int MaxSeconds = 24 * 60 * 60;
+    public const int MaxSeconds = 5 * 60 * 60;
 
     public static bool TryParseSeconds(string? text, out int seconds)
     {

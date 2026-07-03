@@ -128,15 +128,25 @@
                                     Content="Set"
                                     Margin="6,0,0,0"
                                     Click="OnCustomTimeoutSet"/>
+                            <ComboBox x:Name="CustomUnitBox"
+                                      DockPanel.Dock="Right"
+                                      Width="52"
+                                      FontSize="11"
+                                      Margin="4,0,0,0"
+                                      SelectedIndex="0">
+                                <ComboBoxItem Content="sec"/>
+                                <ComboBoxItem Content="min"/>
+                                <ComboBoxItem Content="hr"/>
+                            </ComboBox>
                             <TextBox x:Name="CustomTimeoutBox"
-                                     Width="70"
+                                     Width="44"
                                      FontSize="11"
                                      Padding="4,2"
                                      Background="#22FFFFFF"
                                      Foreground="#DDFFFFFF"
                                      BorderBrush="{StaticResource PillStroke}"
                                      CaretBrush="#DDFFFFFF"
-                                     ToolTip="Custom, e.g. 45s, 2m, 1h"
+                                     ToolTip="Custom amount (max 5 hours)"
                                      KeyDown="OnCustomTimeoutKeyDown"/>
                         </DockPanel>
                     </StackPanel>

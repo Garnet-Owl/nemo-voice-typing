@@ -6,6 +6,10 @@ ticket-driven work — newest entry always at the top.
 
 ## [Unreleased]
 
+### Changed
+- Custom timeout entry no longer takes typed units: a number box plus a sec/min/hr dropdown, with the range enforced at 5 seconds to 5 hours (was 24h).
+- Tests rewritten in the team's givenpy style via a new C# `Bdd` template (`tests/unit/Bdd.cs`): `using (Given(...)) / (When(...)) / (Then(...))` scopes, imported with `using static`.
+
 ### Added
 - Mic auto-stop duration picker: clicking the pill's empty space (beside the mic button) opens a popup above the pill with 15s/30s/1m/5m/10m/1h presets plus a custom entry (`45`, `90s`, `2m`, `1h`). Default stays 30s; persisted in config and applied live. Parsing covered by unit tests (`DurationText`).
 - Unit test project (`tests/unit`, xUnit, given-when-then style) wired into the solution.
