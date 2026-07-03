@@ -50,6 +50,26 @@ jobs:
         run: |
           Copy-Item "dist/Nemo Voice Typing.exe" "dist/Nemo-Voice-Typing.exe"
 
+      - name: Extract latest changelog section
+        id: changelog
+        shell: pwsh
+        run: |
+          # Pull the newest entry (first "## ..." section) out of CHANGELOG.md
+          # so the release body leads with the human-written notes. Falls back
+          # to empty if the file is missing or has no sections yet.
+          $notes = ""
+          if (Test-Path CHANGELOG.md) {
+            $lines = Get-Content CHANGELOG.md
+            $start = -1
+            for ($i = 0; $i -lt $lines.Count; $i++) {
+              if ($lines[$i] -match '^## ') {
+                if ($start -lt 0) { $start = $i } else { $notes = ($lines[$start..($i-1)] -join "`n").Trim(); break }
+              }
+            }
+            if ($start -ge 0 -and -not $notes) { $notes = ($lines[$start..($lines.Count-1)] -join "`n").Trim() }
+          }
+          Set-Content -Path notes.md -Value $notes -Encoding utf8
+
       - name: Create or update release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -57,11 +77,13 @@ jobs:
         run: |
           $tag = "${{ steps.ver.outputs.tag }}"
           $title = "${{ steps.ver.outputs.title }}"
-          $notes = "Automated release from commit ${{ github.sha }}.`n`nSee the commit log for changes."
           # Delete existing tag/release with the same name (idempotent re-runs)
           gh release delete $tag --yes --cleanup-tag 2>$null
+          # --notes-file provides the changelog excerpt; --generate-notes makes
+          # GitHub append a "What's Changed" commit list since the last release.
           gh release create $tag "dist/Nemo-Voice-Typing.exe" `
             --target ${{ github.sha }} `
             --title $title `
-            --notes $notes `
+            --notes-file notes.md `
+            --generate-notes `
             --latest
