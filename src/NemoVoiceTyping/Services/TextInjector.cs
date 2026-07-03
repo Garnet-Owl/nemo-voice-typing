@@ -43,11 +43,11 @@ public static class TextInjector
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
+    /// <summary>Each UTF-16 code unit needs two INPUTs: key down + key up.</summary>
     public static void Type(string text)
     {
         if (string.IsNullOrEmpty(text)) return;
 
-        // Per UTF-16 code unit we need 2 INPUTs (key down + key up).
         var inputs = new INPUT[text.Length * 2];
         for (int i = 0; i < text.Length; i++)
         {

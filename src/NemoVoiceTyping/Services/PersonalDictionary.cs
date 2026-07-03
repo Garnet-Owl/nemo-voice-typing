@@ -43,8 +43,10 @@ public sealed class PersonalDictionary
     private readonly List<string> _hotwords = new();
     private DateTime _lastLoadUtc = DateTime.MinValue;
 
-    // Voice-command keywords must never be "corrected" into a hotword —
-    // doing so would silently break "scratch that", "new line", etc.
+    /// <summary>
+    /// Voice-command keywords must never be "corrected" into a hotword —
+    /// doing so would silently break "scratch that", "new line", etc.
+    /// </summary>
     private static readonly HashSet<string> ReservedWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "period", "fullstop", "dot", "comma", "colon", "semicolon",
@@ -204,7 +206,6 @@ public sealed class PersonalDictionary
 
         lock (_lock)
         {
-            // 1. Exact explicit correction always wins.
             if (_corrections.TryGetValue(word, out var mapped))
             {
                 result = ApplyCase(word, mapped);
@@ -213,12 +214,9 @@ public sealed class PersonalDictionary
 
             if (_hotwords.Count == 0) return false;
 
-            // 2. Already an exact (case-insensitive) hotword: leave as-is.
             foreach (var hw in _hotwords)
                 if (string.Equals(hw, word, StringComparison.OrdinalIgnoreCase)) return false;
 
-            // 3. Fuzzy match: bounded edit distance, length-gated so we
-            // don't waste cycles comparing wildly different-length words.
             string? best = null;
             int bestDist = int.MaxValue;
             foreach (var hw in _hotwords)
@@ -245,9 +243,11 @@ public sealed class PersonalDictionary
         return false;
     }
 
-    // Roughly: allow 1 edit for short words, 2 for medium, 3 for long ones.
-    // Keeps false-positive corrections rare while still catching the kind
-    // of near-miss spelling an ASR model produces for an unfamiliar accent.
+    /// <summary>
+    /// Allowed edits: 1 for short words, 2 for medium, 3 for long. Keeps
+    /// false-positive corrections rare while still catching the near-miss
+    /// spellings an ASR model produces for unfamiliar words.
+    /// </summary>
     private static int Threshold(int len) => len <= 4 ? 1 : len <= 8 ? 2 : 3;
 
     /// <summary>Levenshtein distance, early-exiting once it's clear the
@@ -273,7 +273,7 @@ public sealed class PersonalDictionary
                 curr[j] = Math.Min(Math.Min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
                 if (curr[j] < rowMin) rowMin = curr[j];
             }
-            if (rowMin > maxDist) return -1; // whole row exceeds bound, no point continuing
+            if (rowMin > maxDist) return -1;
             (prev, curr) = (curr, prev);
         }
         return prev[lb] <= maxDist ? prev[lb] : -1;
@@ -285,10 +285,6 @@ public sealed class PersonalDictionary
     /// respect the dictionary's own casing.</summary>
     private static string ApplyCase(string original, string target)
     {
-        // If the target has an uppercase letter anywhere after the first
-        // position (e.g. "NeMo", "ONNX" has none-after-first but is all
-        // caps, "iPhone"-style), treat that as a deliberate spelling and
-        // don't touch it — the dictionary author knows best.
         bool targetHasInnerUpper = false;
         for (int i = 1; i < target.Length; i++)
             if (char.IsUpper(target[i])) { targetHasInnerUpper = true; break; }

@@ -153,6 +153,7 @@ public partial class FloatingPanel : Window
         }
         BuildTimeoutOptions();
         PrefillCustomEntry();
+        ClearCustomTimeoutWarning();
         TimeoutPopup.IsOpen = true;
     }
 
@@ -205,18 +206,34 @@ public partial class FloatingPanel : Window
         };
     }
 
+    private void OnCustomTimeoutChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        => ClearCustomTimeoutWarning();
+
     private void ApplyCustomTimeout()
     {
         var suffix = CustomUnitBox.SelectedIndex switch { 1 => "m", 2 => "h", _ => "s" };
-        if (Services.DurationText.TryParseSeconds(CustomTimeoutBox.Text.Trim() + suffix, out var seconds))
+        var result = Services.DurationText.Parse(CustomTimeoutBox.Text.Trim() + suffix, out var seconds);
+        if (result == Services.DurationParseResult.Valid)
         {
-            CustomTimeoutBox.ClearValue(System.Windows.Controls.TextBox.BorderBrushProperty);
+            ClearCustomTimeoutWarning();
             ApplyTimeout(seconds);
+            return;
         }
-        else
+
+        CustomTimeoutBox.BorderBrush = Brushes.IndianRed;
+        TimeoutWarning.Text = result switch
         {
-            CustomTimeoutBox.BorderBrush = Brushes.IndianRed;
-        }
+            Services.DurationParseResult.AboveMaximum => "Can't exceed 5 hours",
+            Services.DurationParseResult.BelowMinimum => "Minimum is 5 seconds",
+            _ => "Enter a number",
+        };
+        TimeoutWarning.Visibility = Visibility.Visible;
+    }
+
+    private void ClearCustomTimeoutWarning()
+    {
+        CustomTimeoutBox.ClearValue(System.Windows.Controls.TextBox.BorderBrushProperty);
+        TimeoutWarning.Visibility = Visibility.Collapsed;
     }
 
     private void OnRightClick(object sender, MouseButtonEventArgs e)

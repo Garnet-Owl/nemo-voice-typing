@@ -14,9 +14,12 @@ namespace NemoVoiceTyping.Services;
 /// </summary>
 public sealed class NemoStreamingAsr : IDisposable
 {
-    // Shapes & constants from genai_config.json / encoder inspection
-    private const int ChunkSamples = 8960;          // 560 ms @ 16 kHz
-    private const int EncoderTimeIn = 65;           // 56 hops in chunk + 9 cached frames
+    /// <summary>560 ms @ 16 kHz. Shapes and constants below come from
+    /// genai_config.json and encoder inspection.</summary>
+    private const int ChunkSamples = 8960;
+
+    /// <summary>56 hops per chunk + 9 cached frames.</summary>
+    private const int EncoderTimeIn = 65;
     private const int PreEncodeCacheFrames = 9;
     private const int NMels = 128;
     private const int EncHidden = 1024;
@@ -36,7 +39,7 @@ public sealed class NemoStreamingAsr : IDisposable
     private readonly MelExtractor _mel;
     private readonly Tokenizer _tokenizer;
 
-    // Preallocated tensors & input arrays (re-used across chunks)
+    /// <summary>Preallocated tensors and input arrays, reused across chunks.</summary>
     private readonly DenseTensor<float> _encInTensor;
     private readonly DenseTensor<long> _lengthTensor;
     private readonly DenseTensor<float> _encFrameTensor;
@@ -47,18 +50,18 @@ public sealed class NemoStreamingAsr : IDisposable
     private readonly NamedOnnxValue[] _decOnce;
     private readonly NamedOnnxValue[] _jointOnce;
 
-    // Sliding audio buffer: enough for chunk + ~512 lookahead for windowing
     private readonly List<float> _audioBuf = new();
-    // Cached previous mel frames for pre-encode cache
+
+    /// <summary>Previous mel frames carried into the next chunk's pre-encode cache.</summary>
     private readonly float[,] _melCache = new float[NMels, PreEncodeCacheFrames];
     private bool _melCachePrimed;
 
-    // Encoder state (kept across chunks)
+    /// <summary>Encoder state, kept across chunks.</summary>
     private float[] _cacheLastChannel = new float[1 * EncLayers * LeftContext * EncHidden];
     private float[] _cacheLastTime = new float[1 * EncLayers * EncHidden * ConvContext];
     private long[] _cacheLastChannelLen = new long[] { 0 };
 
-    // Decoder state (kept across utterances)
+    /// <summary>Decoder state, kept across utterances.</summary>
     private float[] _h = new float[DecLayers * 1 * DecHidden];
     private float[] _c = new float[DecLayers * 1 * DecHidden];
     private float[] _hPending = new float[DecLayers * 1 * DecHidden];
@@ -67,6 +70,12 @@ public sealed class NemoStreamingAsr : IDisposable
 
     public event Action<string>? TokenEmitted;
 
+    /// <summary>
+    /// Session options mirror the nemo session_options in genai_config:
+    /// thread spinning is disabled (lower CPU between chunks for an
+    /// always-on app) and roughly half the cores are used — the encoder
+    /// parallelises well but shouldn't monopolise the machine.
+    /// </summary>
     public NemoStreamingAsr(string modelDir)
     {
         var so = new SessionOptions
@@ -74,12 +83,8 @@ public sealed class NemoStreamingAsr : IDisposable
             LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR,
             GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
             ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
-            // Match nemo session_options from genai_config: disable thread spinning
-            // (lower CPU between chunks, friendlier for an always-on background app)
         };
         so.AddSessionConfigEntry("session.intra_op.allow_spinning", "0");
-        // Use roughly half the cores. The encoder is the only heavy op and it
-        // parallelises well, but we don't want to monopolise the box.
         int cores = Math.Max(1, Environment.ProcessorCount / 2);
         so.IntraOpNumThreads = cores;
         so.InterOpNumThreads = 1;
@@ -90,7 +95,6 @@ public sealed class NemoStreamingAsr : IDisposable
         _mel = new MelExtractor();
         _tokenizer = new Tokenizer(Path.Combine(modelDir, "vocab.txt"));
 
-        // Preallocate tensors that don't change shape across calls
         _encInTensor = new DenseTensor<float>(new[] { 1, EncoderTimeIn, NMels });
         _lengthTensor = new DenseTensor<long>(new long[] { EncoderTimeIn }, new[] { 1 });
         _encFrameTensor = new DenseTensor<float>(new[] { 1, 1, EncHidden });
@@ -102,7 +106,6 @@ public sealed class NemoStreamingAsr : IDisposable
         {
             NamedOnnxValue.CreateFromTensor("audio_signal", _encInTensor),
             NamedOnnxValue.CreateFromTensor("length", _lengthTensor),
-            // cache_* tensors are rebuilt each call because the backing array changes
             null!, null!, null!,
         };
 
@@ -137,12 +140,10 @@ public sealed class NemoStreamingAsr : IDisposable
     /// <summary>Push new PCM samples; emits tokens as they decode.</summary>
     public void PushAudio(ReadOnlySpan<float> samples)
     {
-        // Append to ring-ish buffer
         for (int i = 0; i < samples.Length; i++) _audioBuf.Add(samples[i]);
 
         while (_audioBuf.Count >= ChunkSamples)
         {
-            // Take first ChunkSamples
             var chunk = new float[ChunkSamples];
             _audioBuf.CopyTo(0, chunk, 0, ChunkSamples);
             _audioBuf.RemoveRange(0, ChunkSamples);
@@ -151,12 +152,16 @@ public sealed class NemoStreamingAsr : IDisposable
         }
     }
 
+    /// <summary>
+    /// ONNX may reassign the backing arrays of state tensors on every run,
+    /// so the cache tensor wrappers are rebuilt per call around the float
+    /// buffers ONNX returns.
+    /// </summary>
     private void ProcessChunk(float[] chunk)
     {
-        int newFrames = ChunkSamples / MelExtractor.HopLength; // 56
+        int newFrames = ChunkSamples / MelExtractor.HopLength;
         var newMels = _mel.Compute(chunk, newFrames);
 
-        // Fill encoder input in-place: 9 cached frames + 56 new frames
         for (int t = 0; t < PreEncodeCacheFrames; t++)
             for (int m = 0; m < NMels; m++)
                 _encInTensor[0, t, m] = _melCachePrimed ? _melCache[m, t] : 0f;
@@ -164,14 +169,11 @@ public sealed class NemoStreamingAsr : IDisposable
             for (int m = 0; m < NMels; m++)
                 _encInTensor[0, PreEncodeCacheFrames + t, m] = newMels[m, t];
 
-        // Rotate mel cache
         for (int t = 0; t < PreEncodeCacheFrames; t++)
             for (int m = 0; m < NMels; m++)
                 _melCache[m, t] = newMels[m, newFrames - PreEncodeCacheFrames + t];
         _melCachePrimed = true;
 
-        // Cache tensors. Backing arrays may be reassigned per call by ONNX, so
-        // we rebuild the wrapper but reuse the float buffers ONNX returns.
         _encOnce[2] = NamedOnnxValue.CreateFromTensor("cache_last_channel",
             new DenseTensor<float>(_cacheLastChannel, new[] { 1, EncLayers, LeftContext, EncHidden }));
         _encOnce[3] = NamedOnnxValue.CreateFromTensor("cache_last_time",
@@ -202,7 +204,6 @@ public sealed class NemoStreamingAsr : IDisposable
             while (symbols < MaxSymbolsPerStep)
             {
                 _targetsTensor[0, 0] = _lastToken;
-                // Refresh h/c in tensors (state arrays may have been replaced)
                 CopyInto(_h, _hInTensor);
                 CopyInto(_c, _cInTensor);
 

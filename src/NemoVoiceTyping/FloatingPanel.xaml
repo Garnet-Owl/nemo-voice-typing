@@ -147,8 +147,14 @@
                                      BorderBrush="{StaticResource PillStroke}"
                                      CaretBrush="#DDFFFFFF"
                                      ToolTip="Custom amount (max 5 hours)"
+                                     TextChanged="OnCustomTimeoutChanged"
                                      KeyDown="OnCustomTimeoutKeyDown"/>
                         </DockPanel>
+                        <TextBlock x:Name="TimeoutWarning"
+                                   Visibility="Collapsed"
+                                   Foreground="IndianRed"
+                                   FontSize="10"
+                                   Margin="2,4,2,0"/>
                     </StackPanel>
                 </Border>
             </Popup>

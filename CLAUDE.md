@@ -156,5 +156,6 @@ Maintain a high standard of code quality, clear communication, and absolute safe
 - **Changelog style**: entries double as GitHub release notes — the release workflow copies the topmost `## ` section verbatim into each
    release body, so write for end users (some are non-technical). Each entry is a `## YYYY-MM-DD` section, newest date always at the very
    top of the file. Describe which behavior changed, how, and why it matters to the user — never reference file names, classes, or other
-   internals. Maximum 4 bullet points per entry; fold multiple same-day changes into the existing section for that date. Purely internal
-   work (tests, refactors, CI, docs) is omitted unless it changes something a user notices.
+   internals. Maximum 4 bullet points per entry. When the same day accumulates several changes, do NOT append bullets — rewrite that
+   date's section as one consolidated summary so it never becomes redundant or verbose (related changes merge into a single bullet).
+   Purely internal work (tests, refactors, CI, docs) is omitted unless it changes something a user notices.

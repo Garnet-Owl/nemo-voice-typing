@@ -16,7 +16,7 @@ public sealed class ModelDownloader
 {
     public const string DefaultRepo = "Garnet-Owl/nemo-voice-typing-asr";
 
-    // Files required by NemoStreamingAsr at runtime
+    /// <summary>Files required by NemoStreamingAsr at runtime.</summary>
     public static readonly string[] RequiredFiles = new[]
     {
         "encoder.onnx", "encoder.onnx.data",
