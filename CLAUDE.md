@@ -154,8 +154,9 @@ Maintain a high standard of code quality, clear communication, and absolute safe
    so you know exactly where we are at every stage/task of the building process. Use minimal targeted text (3-5 bullet points max) for each session/task.
    NOTE: Do not overwrite the file, and do not append to the bottom — always insert the new entry at the top.
 - **Changelog style**: entries double as GitHub release notes — the release workflow copies the topmost `## ` section verbatim into each
-   release body, so write for end users (some are non-technical). Each entry is a `## YYYY-MM-DD` section, newest date always at the very
-   top of the file. Describe which behavior changed, how, and why it matters to the user — never reference file names, classes, or other
+   release body, so write for end users (some are non-technical). Each entry is a `## YYYY-MM-DD — <short semantic title>` section — the
+   title summarizes what the entry revolves around (e.g. `## 2026-07-03 — A mic pill that stays on screen`), newest date always at the
+   very top of the file. Describe which behavior changed, how, and why it matters to the user — never reference file names, classes, or other
    internals. Maximum 4 bullet points per entry. When the same day accumulates several changes, do NOT append bullets — rewrite that
    date's section as one consolidated summary so it never becomes redundant or verbose (related changes merge into a single bullet).
    Purely internal work (tests, refactors, CI, docs) is omitted unless it changes something a user notices.

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,7 +11,7 @@ namespace NemoVoiceTyping;
 
 public partial class App : System.Windows.Application
 {
-    private static Mutex? _singleInstance;
+    private Mutex? _singleInstance;
     private AppConfig _config = null!;
     private FloatingPanel? _panel;
     private TaskbarIcon? _tray;
@@ -94,7 +95,7 @@ public partial class App : System.Windows.Application
         _dictation?.Dispose();
         _hotkey?.Dispose();
         _tray?.Dispose();
-        try { _singleInstance?.ReleaseMutex(); } catch { }
+        try { _singleInstance?.ReleaseMutex(); } catch (Exception ex) { Debug.WriteLine(ex); }
         base.OnExit(e);
     }
 }
