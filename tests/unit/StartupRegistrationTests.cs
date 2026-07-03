@@ -1,48 +1,75 @@
 using NemoVoiceTyping.Services;
 using Xunit;
+using static NemoVoiceTyping.Tests.Bdd;
 
 namespace NemoVoiceTyping.Tests;
 
 public class StartupRegistrationTests
 {
     [Fact]
-    public void Given_a_process_path_When_building_the_run_command_Then_it_is_the_quoted_path()
+    public void Returns_the_quoted_process_path_when_one_exists()
     {
-        // Given
-        var processPath = @"C:\Apps\Nemo\Nemo Voice Typing.exe";
-
-        // When
-        var command = StartupRegistration.BuildRunCommand(processPath, @"C:\ignored");
-
-        // Then
-        Assert.Equal("\"C:\\Apps\\Nemo\\Nemo Voice Typing.exe\"", command);
-    }
-
-    [Fact]
-    public void Given_no_process_path_When_building_the_run_command_Then_it_falls_back_to_the_app_directory()
-    {
-        // Given — single-file hosts can, in edge cases, report no process path
         string? processPath = null;
+        string command = "";
 
-        // When
-        var command = StartupRegistration.BuildRunCommand(processPath, @"C:\Apps\Nemo");
+        using (Given("a live process path"))
+        {
+            processPath = @"C:\Apps\Nemo\Nemo Voice Typing.exe";
+        }
 
-        // Then
-        Assert.Equal("\"C:\\Apps\\Nemo\\Nemo Voice Typing.exe\"", command);
+        using (When("building the run-at-startup command"))
+        {
+            command = StartupRegistration.BuildRunCommand(processPath, @"C:\ignored");
+        }
+
+        using (Then("the command is the quoted process path"))
+        {
+            Assert.Equal("\"C:\\Apps\\Nemo\\Nemo Voice Typing.exe\"", command);
+        }
     }
 
     [Fact]
-    public void Given_an_empty_process_path_When_building_the_run_command_Then_it_never_registers_an_empty_command()
+    public void Falls_back_to_the_app_directory_when_the_process_path_is_missing()
     {
-        // Given — Assembly.Location returns "" in single-file publishes (IL3000);
-        // this guards against that class of bug regressing.
+        string? processPath = null;
+        string command = "";
+
+        using (Given("no process path, as single-file hosts can report in edge cases"))
+        {
+            processPath = null;
+        }
+
+        using (When("building the run-at-startup command"))
+        {
+            command = StartupRegistration.BuildRunCommand(processPath, @"C:\Apps\Nemo");
+        }
+
+        using (Then("the command points at the exe inside the app directory"))
+        {
+            Assert.Equal("\"C:\\Apps\\Nemo\\Nemo Voice Typing.exe\"", command);
+        }
+    }
+
+    [Fact]
+    public void Never_registers_an_empty_command_when_the_process_path_is_empty()
+    {
         var processPath = "";
+        var command = "";
 
-        // When
-        var command = StartupRegistration.BuildRunCommand(processPath, @"C:\Apps\Nemo");
+        using (Given("an empty process path, like Assembly.Location in single-file publishes (IL3000)"))
+        {
+            processPath = "";
+        }
 
-        // Then
-        Assert.NotEqual("\"\"", command);
-        Assert.EndsWith("Nemo Voice Typing.exe\"", command);
+        using (When("building the run-at-startup command"))
+        {
+            command = StartupRegistration.BuildRunCommand(processPath, @"C:\Apps\Nemo");
+        }
+
+        using (Then("the command is never the empty quoted string"))
+        {
+            Assert.NotEqual("\"\"", command);
+            Assert.EndsWith("Nemo Voice Typing.exe\"", command);
+        }
     }
 }

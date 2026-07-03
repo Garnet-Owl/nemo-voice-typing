@@ -160,9 +160,7 @@ public partial class FloatingPanel : Window
             return;
         }
         BuildTimeoutOptions();
-        CustomTimeoutBox.Text = Array.IndexOf(TimeoutPresets, _config.IdleTimeoutSeconds) >= 0
-            ? ""
-            : Services.DurationText.Format(_config.IdleTimeoutSeconds);
+        PrefillCustomEntry();
         TimeoutPopup.IsOpen = true;
     }
 
@@ -198,10 +196,36 @@ public partial class FloatingPanel : Window
         if (e.Key == Key.Enter) ApplyCustomTimeout();
     }
 
+    /// <summary>
+    /// Shows the current non-preset value split into number + unit so the
+    /// user never types a unit — the dropdown carries it.
+    /// </summary>
+    private void PrefillCustomEntry()
+    {
+        var current = _config.IdleTimeoutSeconds;
+        if (Array.IndexOf(TimeoutPresets, current) >= 0)
+        {
+            CustomTimeoutBox.Text = "";
+            CustomUnitBox.SelectedIndex = 0;
+            return;
+        }
+        (CustomTimeoutBox.Text, CustomUnitBox.SelectedIndex) = current switch
+        {
+            _ when current % 3600 == 0 => ((current / 3600).ToString(), 2),
+            _ when current % 60 == 0 => ((current / 60).ToString(), 1),
+            _ => (current.ToString(), 0),
+        };
+    }
+
     private void ApplyCustomTimeout()
     {
-        if (Services.DurationText.TryParseSeconds(CustomTimeoutBox.Text, out var seconds))
+        // The unit comes from the dropdown; the box holds only the amount.
+        // Reuse the tested parser (and its 5s..5h range check) by feeding
+        // it the amount plus the selected unit's suffix.
+        var suffix = CustomUnitBox.SelectedIndex switch { 1 => "m", 2 => "h", _ => "s" };
+        if (Services.DurationText.TryParseSeconds(CustomTimeoutBox.Text.Trim() + suffix, out var seconds))
         {
+            CustomTimeoutBox.ClearValue(System.Windows.Controls.TextBox.BorderBrushProperty);
             ApplyTimeout(seconds);
         }
         else
