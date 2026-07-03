@@ -44,12 +44,12 @@ public class DurationTextTests
     {
         using (Given("inputs that are not durations"))
         using (When("parsing them"))
-        using (Then("each is rejected"))
+        using (Then("each is rejected as not a number"))
         {
-            Assert.False(DurationText.TryParseSeconds(null, out _));
-            Assert.False(DurationText.TryParseSeconds("", out _));
-            Assert.False(DurationText.TryParseSeconds("soon", out _));
-            Assert.False(DurationText.TryParseSeconds("5x", out _));
+            Assert.Equal(DurationParseResult.NotANumber, DurationText.Parse(null, out _));
+            Assert.Equal(DurationParseResult.NotANumber, DurationText.Parse("", out _));
+            Assert.Equal(DurationParseResult.NotANumber, DurationText.Parse("soon", out _));
+            Assert.Equal(DurationParseResult.NotANumber, DurationText.Parse("5x", out _));
         }
     }
 
@@ -58,12 +58,12 @@ public class DurationTextTests
     {
         using (Given("values below 5 seconds or above 5 hours"))
         using (When("parsing them"))
-        using (Then("out-of-range values are rejected and the 5h boundary is accepted"))
+        using (Then("each is rejected with the matching reason and the 5h boundary is accepted"))
         {
-            Assert.False(DurationText.TryParseSeconds("2", out _));
-            Assert.False(DurationText.TryParseSeconds("0", out _));
-            Assert.False(DurationText.TryParseSeconds("-30", out _));
-            Assert.False(DurationText.TryParseSeconds("6h", out _));
+            Assert.Equal(DurationParseResult.BelowMinimum, DurationText.Parse("2", out _));
+            Assert.Equal(DurationParseResult.BelowMinimum, DurationText.Parse("0", out _));
+            Assert.Equal(DurationParseResult.BelowMinimum, DurationText.Parse("-30", out _));
+            Assert.Equal(DurationParseResult.AboveMaximum, DurationText.Parse("6h", out _));
             Assert.True(DurationText.TryParseSeconds("5h", out var max) && max == 18000);
         }
     }

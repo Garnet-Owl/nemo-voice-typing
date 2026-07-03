@@ -24,7 +24,6 @@ public sealed class AudioCapture : IDisposable
         _wave = new WaveInEvent
         {
             WaveFormat = new WaveFormat(SampleRate, 16, 1),
-            // 20 ms buffers keep the first emission snappy without flooding callbacks
             BufferMilliseconds = 20,
             NumberOfBuffers = 4,
         };
@@ -50,13 +49,16 @@ public sealed class AudioCapture : IDisposable
             sumSq += f * f;
         }
         double rms = Math.Sqrt(sumSq / sampleCount);
-        // Map ~ -45 dBFS .. -5 dBFS to 0..1
         double db = 20.0 * Math.Log10(rms + 1e-9);
-        double level = Math.Clamp((db + 45.0) / 40.0, 0.0, 1.0);
+        double level = MapDecibelsToUnitLevel(db);
 
         SamplesAvailable?.Invoke(buf);
         LevelAvailable?.Invoke(level);
     }
+
+    /// <summary>Maps roughly -45..-5 dBFS onto 0..1 for the level meter.</summary>
+    private static double MapDecibelsToUnitLevel(double db)
+        => Math.Clamp((db + 45.0) / 40.0, 0.0, 1.0);
 
     public void Stop()
     {

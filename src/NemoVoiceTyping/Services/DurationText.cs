@@ -3,6 +3,14 @@ using System.Globalization;
 
 namespace NemoVoiceTyping.Services;
 
+public enum DurationParseResult
+{
+    Valid,
+    NotANumber,
+    BelowMinimum,
+    AboveMaximum,
+}
+
 /// <summary>
 /// Parses and formats user-entered durations for the mic idle-timeout
 /// picker. Accepts a bare number (seconds) or a number with an s/m/h
@@ -14,9 +22,12 @@ public static class DurationText
     public const int MaxSeconds = 5 * 60 * 60;
 
     public static bool TryParseSeconds(string? text, out int seconds)
+        => Parse(text, out seconds) == DurationParseResult.Valid;
+
+    public static DurationParseResult Parse(string? text, out int seconds)
     {
         seconds = 0;
-        if (string.IsNullOrWhiteSpace(text)) return false;
+        if (string.IsNullOrWhiteSpace(text)) return DurationParseResult.NotANumber;
 
         var t = text.Trim().ToLowerInvariant();
         var multiplier = 1;
@@ -25,13 +36,14 @@ public static class DurationText
         else if (t.EndsWith('s')) { t = t[..^1]; }
 
         if (!double.TryParse(t.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-            return false;
+            return DurationParseResult.NotANumber;
 
         var total = (int)Math.Round(value * multiplier);
-        if (total < MinSeconds || total > MaxSeconds) return false;
+        if (total < MinSeconds) return DurationParseResult.BelowMinimum;
+        if (total > MaxSeconds) return DurationParseResult.AboveMaximum;
 
         seconds = total;
-        return true;
+        return DurationParseResult.Valid;
     }
 
     public static string Format(int seconds)

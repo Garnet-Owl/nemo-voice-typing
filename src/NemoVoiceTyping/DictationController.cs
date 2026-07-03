@@ -101,9 +101,6 @@ public sealed class DictationController : IDisposable
         };
         _worker.Start();
 
-        // Drive the post-processor's pause-based logic (auto period,
-        // pending-command timeout, dangling-word flush), and watch for the
-        // configured spell of no recognized speech so we can auto-stop.
         _tickTimer = new System.Threading.Timer(_ =>
         {
             try { _processor.Tick(); } catch { }
@@ -165,6 +162,11 @@ public sealed class DictationController : IDisposable
 
     private enum StopReason { Manual, Idle, Shutdown }
 
+    /// <summary>
+    /// The processor is drained on stop so the last word isn't left in the
+    /// buffer waiting for the model's 3.36s VAD threshold. Shutdown plays
+    /// no chime.
+    /// </summary>
     private void Stop(StopReason reason = StopReason.Manual)
     {
         _running = false;
@@ -174,9 +176,6 @@ public sealed class DictationController : IDisposable
         _worker = null;
         _tickTimer?.Dispose();
         _tickTimer = null;
-        // Drain whatever the processor is still holding so toggling off
-        // doesn't leave the last word stuck in the buffer waiting for the
-        // 3.36s VAD threshold to elapse.
         try { _processor.FlushBuffer(); } catch { }
         try { _processor.Tick(); } catch { }
         _panel.SetListening(false);
@@ -185,7 +184,6 @@ public sealed class DictationController : IDisposable
         {
             case StopReason.Manual: SoundCues.PlayManualStop(); break;
             case StopReason.Idle: SoundCues.PlayIdleStop(); break;
-            // Shutdown: silent — no need for a chime on app exit.
         }
     }
 
@@ -241,10 +239,7 @@ public sealed class DictationController : IDisposable
 
     private void OnTokenEmitted(string piece)
     {
-        // Recognized speech counts as activity; reset the idle-timeout clock.
         Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
-        // The processor owns word assembly, capitalisation, voice commands
-        // and auto-punctuation. It calls TextInjector itself.
         _processor.Push(piece);
     }
 

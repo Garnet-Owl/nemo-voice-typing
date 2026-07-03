@@ -46,7 +46,6 @@ public sealed class MelExtractor
         var mel = new float[NMels, frames];
         var spec = new float[NFft / 2 + 1];
 
-        // Pre-emphasis applied implicitly via differencing in-place (read-only copy)
         for (int t = 0; t < frames; t++)
         {
             int center = t * HopLength;
@@ -101,11 +100,13 @@ public sealed class MelExtractor
         return s[i];
     }
 
-    /// <summary>In-place radix-2 Cooley-Tukey FFT. n must be a power of two.</summary>
+    /// <summary>
+    /// In-place radix-2 Cooley-Tukey FFT: bit-reverse permutation followed
+    /// by butterfly passes. n must be a power of two.
+    /// </summary>
     private static void Fft(float[] re, float[] im)
     {
         int n = re.Length;
-        // Bit-reverse permutation
         for (int i = 1, j = 0; i < n; i++)
         {
             int bit = n >> 1;
@@ -154,7 +155,6 @@ public sealed class MelExtractor
             float left = melPoints[m], center = melPoints[m + 1], right = melPoints[m + 2];
             float lWidth = center - left;
             float rWidth = right - center;
-            // Slaney-norm-style triangular filters
             for (int k = 0; k < bins; k++)
             {
                 float f = freqs[k];
