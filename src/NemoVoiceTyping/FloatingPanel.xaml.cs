@@ -1,6 +1,8 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -62,7 +64,68 @@ public partial class FloatingPanel : Window
             Left = wa.Right - Width - 16;
             Top = wa.Top + (wa.Height - Height) / 2;
         }
+
+        // The saved position may be stale (resolution change, monitor
+        // unplugged, taskbar moved) — pull the panel back on-screen.
+        ClampToWorkArea();
+        IsVisibleChanged += (_, args) =>
+        {
+            if (args.NewValue is true) ClampToWorkArea();
+        };
     }
+
+    /// <summary>
+    /// Keeps the whole panel inside the work area (screen minus taskbar)
+    /// of the monitor it is currently on, so it can never be lost past a
+    /// screen edge or hidden under the taskbar.
+    /// </summary>
+    private void ClampToWorkArea()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        var source = PresentationSource.FromVisual(this);
+        if (source?.CompositionTarget is not { } target) return;
+
+        var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref info)) return;
+
+        // Work area is in physical pixels; Left/Top are DIPs.
+        var toDip = target.TransformFromDevice;
+        var min = toDip.Transform(new Point(info.rcWork.Left, info.rcWork.Top));
+        var max = toDip.Transform(new Point(info.rcWork.Right, info.rcWork.Bottom));
+
+        var width = ActualWidth > 0 ? ActualWidth : Width;
+        var height = ActualHeight > 0 ? ActualHeight : Height;
+
+        // Max-then-min so that if the panel is somehow larger than the
+        // work area, the top-left corner (with the mic button) wins.
+        var left = Math.Max(min.X, Math.Min(Left, max.X - width));
+        var top = Math.Max(min.Y, Math.Min(Top, max.Y - height));
+
+        if (left != Left) Left = left;
+        if (top != Top) Top = top;
+    }
+
+    private const int MONITOR_DEFAULTTONEAREST = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public int dwFlags;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
 
     private void PersistPosition()
     {
@@ -76,7 +139,11 @@ public partial class FloatingPanel : Window
 
     private void OnDragBegin(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton == MouseButton.Left) DragMove();
+        if (e.ChangedButton != MouseButton.Left) return;
+        // DragMove blocks until the button is released, so the snap-back
+        // happens the instant the user drops the panel past an edge.
+        DragMove();
+        ClampToWorkArea();
     }
 
     private void OnRightClick(object sender, MouseButtonEventArgs e)
