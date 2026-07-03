@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -101,25 +102,25 @@ public sealed class DictationController : IDisposable
         };
         _worker.Start();
 
-        _tickTimer = new System.Threading.Timer(_ =>
-        {
-            try { _processor.Tick(); } catch { }
-            if (_running)
-            {
-                var idleFor = DateTime.UtcNow - new DateTime(Interlocked.Read(ref _lastActivityTicks));
-                if (idleFor > IdleTimeout)
-                {
-                    _panel.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        if (_running) Stop(StopReason.Idle);
-                    }));
-                }
-            }
-        }, null, 100, 100);
+        _tickTimer = new System.Threading.Timer(OnTick, null, 100, 100);
 
         _audio.Start();
         _panel.SetListening(true);
         SoundCues.PlayStart();
+    }
+
+    private void OnTick(object? state)
+    {
+        try { _processor.Tick(); } catch (Exception ex) { Debug.WriteLine(ex); }
+        if (!_running) return;
+
+        var lastActivity = new DateTime(Interlocked.Read(ref _lastActivityTicks), DateTimeKind.Utc);
+        if (DateTime.UtcNow - lastActivity <= IdleTimeout) return;
+
+        _panel.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (_running) Stop(StopReason.Idle);
+        }));
     }
 
     /// <summary>
@@ -176,8 +177,8 @@ public sealed class DictationController : IDisposable
         _worker = null;
         _tickTimer?.Dispose();
         _tickTimer = null;
-        try { _processor.FlushBuffer(); } catch { }
-        try { _processor.Tick(); } catch { }
+        try { _processor.FlushBuffer(); } catch (Exception ex) { Debug.WriteLine(ex); }
+        try { _processor.Tick(); } catch (Exception ex) { Debug.WriteLine(ex); }
         _panel.SetListening(false);
 
         switch (reason)

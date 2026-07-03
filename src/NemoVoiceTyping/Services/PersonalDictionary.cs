@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -78,9 +80,10 @@ public sealed class PersonalDictionary
             var mtime = File.GetLastWriteTimeUtc(FilePath);
             if (mtime > _lastLoadUtc) Load();
         }
-        catch { /* best-effort */ }
+        catch (Exception ex) { Debug.WriteLine(ex); }
     }
 
+    /// <summary>A corrupt or missing file just means no personalization yet.</summary>
     private void Load()
     {
         lock (_lock)
@@ -89,23 +92,26 @@ public sealed class PersonalDictionary
             _hotwords.Clear();
             try
             {
-                if (File.Exists(FilePath))
-                {
-                    var json = File.ReadAllText(FilePath);
-                    var data = JsonSerializer.Deserialize<DictionaryFile>(json);
-                    if (data?.Corrections != null)
-                        foreach (var kv in data.Corrections)
-                            if (!string.IsNullOrWhiteSpace(kv.Key) && !string.IsNullOrWhiteSpace(kv.Value))
-                                _corrections[kv.Key.Trim()] = kv.Value.Trim();
-                    if (data?.Hotwords != null)
-                        foreach (var w in data.Hotwords)
-                            if (!string.IsNullOrWhiteSpace(w))
-                                _hotwords.Add(w.Trim());
-                    _lastLoadUtc = File.GetLastWriteTimeUtc(FilePath);
-                }
+                if (!File.Exists(FilePath)) return;
+                var data = JsonSerializer.Deserialize<DictionaryFile>(File.ReadAllText(FilePath));
+                LoadEntries(data);
+                _lastLoadUtc = File.GetLastWriteTimeUtc(FilePath);
             }
-            catch { /* corrupt/missing file just means no personalization yet */ }
+            catch (Exception ex) { Debug.WriteLine(ex); }
         }
+    }
+
+    private void LoadEntries(DictionaryFile? data)
+    {
+        var corrections = (data?.Corrections ?? new Dictionary<string, string>())
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Key) && !string.IsNullOrWhiteSpace(kv.Value));
+        foreach (var kv in corrections)
+            _corrections[kv.Key.Trim()] = kv.Value.Trim();
+
+        var hotwords = (data?.Hotwords ?? new List<string>())
+            .Where(w => !string.IsNullOrWhiteSpace(w));
+        foreach (var w in hotwords)
+            _hotwords.Add(w.Trim());
     }
 
     public void Save()
@@ -124,7 +130,7 @@ public sealed class PersonalDictionary
                 File.WriteAllText(FilePath, json);
                 _lastLoadUtc = File.GetLastWriteTimeUtc(FilePath);
             }
-            catch { /* best-effort */ }
+            catch (Exception ex) { Debug.WriteLine(ex); }
         }
     }
 
@@ -145,7 +151,7 @@ public sealed class PersonalDictionary
                 "}\n";
             File.WriteAllText(FilePath, template);
         }
-        catch { /* best-effort */ }
+        catch (Exception ex) { Debug.WriteLine(ex); }
     }
 
     public void AddHotword(string word)
@@ -153,8 +159,7 @@ public sealed class PersonalDictionary
         if (string.IsNullOrWhiteSpace(word)) return;
         lock (_lock)
         {
-            foreach (var w in _hotwords)
-                if (string.Equals(w, word, StringComparison.OrdinalIgnoreCase)) return;
+            if (_hotwords.Any(w => string.Equals(w, word, StringComparison.OrdinalIgnoreCase))) return;
             _hotwords.Add(word.Trim());
         }
         Save();
@@ -213,27 +218,10 @@ public sealed class PersonalDictionary
             }
 
             if (_hotwords.Count == 0) return false;
+            if (_hotwords.Any(hw => string.Equals(hw, word, StringComparison.OrdinalIgnoreCase)))
+                return false;
 
-            foreach (var hw in _hotwords)
-                if (string.Equals(hw, word, StringComparison.OrdinalIgnoreCase)) return false;
-
-            string? best = null;
-            int bestDist = int.MaxValue;
-            foreach (var hw in _hotwords)
-            {
-                int lenDiff = Math.Abs(hw.Length - word.Length);
-                int threshold = Threshold(hw.Length);
-                if (lenDiff > threshold) continue;
-
-                int dist = BoundedLevenshtein(word, hw, threshold);
-                if (dist >= 0 && dist < bestDist)
-                {
-                    bestDist = dist;
-                    best = hw;
-                    if (dist == 0) break;
-                }
-            }
-
+            var best = FindClosestHotword(word);
             if (best != null)
             {
                 result = ApplyCase(word, best);
@@ -243,12 +231,37 @@ public sealed class PersonalDictionary
         return false;
     }
 
+    private string? FindClosestHotword(string word)
+    {
+        string? best = null;
+        int bestDist = int.MaxValue;
+        foreach (var hw in _hotwords)
+        {
+            int threshold = Threshold(hw.Length);
+            if (Math.Abs(hw.Length - word.Length) > threshold) continue;
+
+            int dist = BoundedLevenshtein(word, hw, threshold);
+            if (dist >= 0 && dist < bestDist)
+            {
+                bestDist = dist;
+                best = hw;
+                if (dist == 0) break;
+            }
+        }
+        return best;
+    }
+
     /// <summary>
     /// Allowed edits: 1 for short words, 2 for medium, 3 for long. Keeps
     /// false-positive corrections rare while still catching the near-miss
     /// spellings an ASR model produces for unfamiliar words.
     /// </summary>
-    private static int Threshold(int len) => len <= 4 ? 1 : len <= 8 ? 2 : 3;
+    private static int Threshold(int len)
+    {
+        if (len <= 4) return 1;
+        if (len <= 8) return 2;
+        return 3;
+    }
 
     /// <summary>Levenshtein distance, early-exiting once it's clear the
     /// result will exceed <paramref name="maxDist"/>. Returns -1 if it
@@ -290,10 +303,9 @@ public sealed class PersonalDictionary
             if (char.IsUpper(target[i])) { targetHasInnerUpper = true; break; }
         if (targetHasInnerUpper) return target;
 
-        bool originalAllUpper = original.Length > 1;
+        bool originalAllUpper = original.Length > 1
+            && !original.Any(c => char.IsLetter(c) && !char.IsUpper(c));
         bool originalCapitalized = original.Length > 0 && char.IsUpper(original[0]);
-        foreach (var c in original)
-            if (char.IsLetter(c) && !char.IsUpper(c)) { originalAllUpper = false; break; }
 
         if (originalAllUpper) return target.ToUpperInvariant();
         if (originalCapitalized && target.Length > 0)
