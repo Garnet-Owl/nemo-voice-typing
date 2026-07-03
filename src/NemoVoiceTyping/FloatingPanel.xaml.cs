@@ -140,10 +140,74 @@ public partial class FloatingPanel : Window
     private void OnDragBegin(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left) return;
+        var before = (Left, Top);
         // DragMove blocks until the button is released, so the snap-back
         // happens the instant the user drops the panel past an edge.
         DragMove();
         ClampToWorkArea();
+        // A press-and-release with no movement is a click on the pill's
+        // empty space (beside the mic button) — open the timeout picker.
+        if ((Left, Top) == before) ToggleTimeoutPopup();
+    }
+
+    private static readonly int[] TimeoutPresets = { 15, 30, 60, 300, 600, 3600 };
+
+    private void ToggleTimeoutPopup()
+    {
+        if (TimeoutPopup.IsOpen)
+        {
+            TimeoutPopup.IsOpen = false;
+            return;
+        }
+        BuildTimeoutOptions();
+        CustomTimeoutBox.Text = Array.IndexOf(TimeoutPresets, _config.IdleTimeoutSeconds) >= 0
+            ? ""
+            : Services.DurationText.Format(_config.IdleTimeoutSeconds);
+        TimeoutPopup.IsOpen = true;
+    }
+
+    private void BuildTimeoutOptions()
+    {
+        TimeoutGrid.Children.Clear();
+        foreach (var seconds in TimeoutPresets)
+        {
+            var button = new System.Windows.Controls.Button
+            {
+                Style = (Style)Resources["TimeoutOption"],
+                Content = Services.DurationText.Format(seconds),
+                Tag = seconds,
+            };
+            if (seconds == _config.IdleTimeoutSeconds)
+                button.Background = (Brush)Resources["OptionAccent"];
+            button.Click += (s, _) => ApplyTimeout((int)((FrameworkElement)s).Tag);
+            TimeoutGrid.Children.Add(button);
+        }
+    }
+
+    private void ApplyTimeout(int seconds)
+    {
+        _config.IdleTimeoutSeconds = seconds;
+        _config.Save();
+        TimeoutPopup.IsOpen = false;
+    }
+
+    private void OnCustomTimeoutSet(object sender, RoutedEventArgs e) => ApplyCustomTimeout();
+
+    private void OnCustomTimeoutKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) ApplyCustomTimeout();
+    }
+
+    private void ApplyCustomTimeout()
+    {
+        if (Services.DurationText.TryParseSeconds(CustomTimeoutBox.Text, out var seconds))
+        {
+            ApplyTimeout(seconds);
+        }
+        else
+        {
+            CustomTimeoutBox.BorderBrush = Brushes.IndianRed;
+        }
     }
 
     private void OnRightClick(object sender, MouseButtonEventArgs e)

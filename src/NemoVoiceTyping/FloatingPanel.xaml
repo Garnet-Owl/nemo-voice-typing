@@ -18,6 +18,31 @@
         <SolidColorBrush x:Key="MicIdle" Color="#6A5CFF"/>
         <SolidColorBrush x:Key="MicActive" Color="#E25C5C"/>
         <SolidColorBrush x:Key="BarBrush" Color="#CC6A5CFF"/>
+        <SolidColorBrush x:Key="OptionAccent" Color="#6A5CFF"/>
+
+        <Style x:Key="TimeoutOption" TargetType="Button">
+            <Setter Property="Foreground" Value="#DDFFFFFF"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Background" Value="#22FFFFFF"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border CornerRadius="18"
@@ -78,6 +103,45 @@
                        FontSize="10"
                        Margin="6,0,2,0"
                        VerticalAlignment="Center"/>
+
+            <Popup x:Name="TimeoutPopup"
+                   StaysOpen="False"
+                   AllowsTransparency="True"
+                   Placement="Top"
+                   PlacementTarget="{Binding ElementName=MicButton}"
+                   VerticalOffset="-10"
+                   PopupAnimation="Fade">
+                <Border CornerRadius="12"
+                        Background="{StaticResource PillBg}"
+                        BorderBrush="{StaticResource PillStroke}"
+                        BorderThickness="1"
+                        Padding="10,8">
+                    <StackPanel>
+                        <TextBlock Text="Keep mic on for"
+                                   Foreground="#99FFFFFF"
+                                   FontSize="10"
+                                   Margin="2,0,2,6"/>
+                        <UniformGrid x:Name="TimeoutGrid" Columns="3"/>
+                        <DockPanel Margin="2,6,2,0">
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource TimeoutOption}"
+                                    Content="Set"
+                                    Margin="6,0,0,0"
+                                    Click="OnCustomTimeoutSet"/>
+                            <TextBox x:Name="CustomTimeoutBox"
+                                     Width="70"
+                                     FontSize="11"
+                                     Padding="4,2"
+                                     Background="#22FFFFFF"
+                                     Foreground="#DDFFFFFF"
+                                     BorderBrush="{StaticResource PillStroke}"
+                                     CaretBrush="#DDFFFFFF"
+                                     ToolTip="Custom, e.g. 45s, 2m, 1h"
+                                     KeyDown="OnCustomTimeoutKeyDown"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+            </Popup>
         </StackPanel>
     </Border>
 </Window>

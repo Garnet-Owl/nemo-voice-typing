@@ -19,6 +19,13 @@ public sealed class AppConfig
     public double PanelTop { get; set; } = double.NaN;
     public bool AlwaysOnTop { get; set; } = true;
 
+    /// <summary>
+    /// How long the mic stays active with no recognized speech before
+    /// dictation auto-stops. Changed from the floating panel's timeout
+    /// popup; applied live on the next idle check.
+    /// </summary>
+    public int IdleTimeoutSeconds { get; set; } = 30;
+
     private static readonly string ConfigPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "NemoVoiceTyping", "config.json");
