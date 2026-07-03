@@ -32,13 +32,10 @@ public sealed class DictationController : IDisposable
     private long _lastActivityTicks;
     private PersonalDictionaryWindow? _dictWindow;
 
-    // Native Windows voice typing behaves the same way: it only listens
-    // while you're actively using it and drops the mic after a spell of
-    // silence. Auto-stopping after a spell of no recognized speech keeps
-    // us from burning a CPU core all day and avoids accidentally
-    // transcribing whatever's said/played after the user tabs away.
-    // The duration is user-configurable from the floating panel's timeout
-    // popup; read live each check so changes apply mid-dictation.
+    /// <summary>
+    /// Read from config on every idle check so a change made from the
+    /// panel's timeout picker applies mid-dictation.
+    /// </summary>
     private TimeSpan IdleTimeout =>
         TimeSpan.FromSeconds(Math.Clamp(_config.IdleTimeoutSeconds,
             Services.DurationText.MinSeconds, Services.DurationText.MaxSeconds));

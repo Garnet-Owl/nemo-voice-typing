@@ -92,6 +92,7 @@ Begin each session with a concise checklist (3-7 bullets) outlining conceptual s
 - Explicit return types; use expression-bodied members for one-liners as the codebase does.
 
 ### General Quality
+- **Comments:** code must be self-documenting — clear names for variables, methods, and classes instead of narration. Do NOT add inline comments explaining what a line does, where a change came from, or why an edit is correct. When something genuinely needs explaining (a constraint the code cannot express), use a short XML doc comment (`/// <summary>`); otherwise no comment at all.
 - Use descriptive names (revealing intent); keep lines readable (~100 chars).
 - **Decompose Conditionals:** Extract complex if/else logic into named methods (e.g., `if (IsListening())`).
 - Replace magic numbers with `const`s or enums.
@@ -152,9 +153,8 @@ Maintain a high standard of code quality, clear communication, and absolute safe
 - After every code change, update the CHANGELOG.md file so we keep track of the changes & progress made. You will also read this file at the start of every interaction
    so you know exactly where we are at every stage/task of the building process. Use minimal targeted text (3-5 bullet points max) for each session/task.
    NOTE: Do not overwrite the file, and do not append to the bottom — always insert the new entry at the top.
-- **Changelog style**: follows [Keep a Changelog v1.1.0](https://keepachangelog.com/en/1.1.0/), adapted for ticket-driven work instead of semver releases.
-   Newest entry always goes at the very top of the file, above everything else (including `[Unreleased]`). Each entry is its own
-   `## EX-XXX — <ticket title>` section (ticket ID + title) instead of a semver `## [x.y.z] - date` header. Keep entries brief — a few
-   bullets per ticket. Use the standard Keep a Changelog categories (`Added` / `Changed` / `Fixed` / `Removed` / `Deprecated` / `Security`)
-   only when a section mixes multiple kinds of change; a single-purpose fix doesn't need the subheading. `[Unreleased]` holds changes not
-   yet tied to a ticket; once a ticket exists, give it its own section instead.
+- **Changelog style**: entries double as GitHub release notes — the release workflow copies the topmost `## ` section verbatim into each
+   release body, so write for end users (some are non-technical). Each entry is a `## YYYY-MM-DD` section, newest date always at the very
+   top of the file. Describe which behavior changed, how, and why it matters to the user — never reference file names, classes, or other
+   internals. Maximum 4 bullet points per entry; fold multiple same-day changes into the existing section for that date. Purely internal
+   work (tests, refactors, CI, docs) is omitted unless it changes something a user notices.
