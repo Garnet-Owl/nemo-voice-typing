@@ -1,6 +1,6 @@
 using NemoVoiceTyping.Services;
 using Xunit;
-using static NemoVoiceTyping.Tests.Bdd;
+using static NemoVoiceTyping.Tests.GivenWhenThen;
 
 namespace NemoVoiceTyping.Tests;
 

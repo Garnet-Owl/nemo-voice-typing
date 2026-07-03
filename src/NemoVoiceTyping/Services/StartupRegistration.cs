@@ -30,9 +30,8 @@ public static class StartupRegistration
     }
 
     /// <summary>
-    /// Builds the quoted command written to the Run key. Prefers the live
-    /// process path; falls back to the app directory + exe name. Never uses
-    /// Assembly.Location, which is empty in single-file publishes (IL3000).
+    /// Assembly.Location must not be used here — it is empty in
+    /// single-file publishes (IL3000).
     /// </summary>
     internal static string BuildRunCommand(string? processPath, string baseDirectory)
     {

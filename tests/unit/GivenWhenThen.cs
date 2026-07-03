@@ -1,25 +1,14 @@
 namespace NemoVoiceTyping.Tests;
 
 /// <summary>
-/// C# port of our givenpy testing template (taura-2.0/tests/givenpy.py).
-/// Import with `using static NemoVoiceTyping.Tests.Bdd;` and structure
-/// tests as:
-///
-///     using (Given("some precondition")) { ... }
-///     using (When("the action under test runs")) { ... }
-///     using (Then("the expected outcome holds")) { ... }
-///
-/// Unlike Python, C# scopes variables to their block — declare shared
-/// test variables at the top of the method and assign them inside Given.
-///
-/// Given() optionally takes setup steps, mirroring givenpy's
-/// `given([steps])`: each step receives the scope's Context, and any
-/// step result that is IDisposable is disposed in reverse order when
-/// the Given scope closes (givenpy's __exit__ over started_steps).
+/// Given/When/Then test template. Import with
+/// <c>using static NemoVoiceTyping.Tests.GivenWhenThen;</c> and structure
+/// tests as <c>using (Given(...)) { } using (When(...)) { } using (Then(...)) { }</c>.
+/// Given() optionally runs setup steps; step results that are IDisposable
+/// are disposed in reverse order when the scope closes.
 /// </summary>
-public static class Bdd
+public static class GivenWhenThen
 {
-    /// <summary>Shared bag for setup steps, like givenpy's Context.</summary>
     public sealed class Context
     {
         private readonly Dictionary<string, object?> _bag = new();

@@ -1,24 +1,13 @@
 # Changelog
 
-All notable changes to Nemo Voice Typing are documented here. Format follows
-[Keep a Changelog v1.1.0](https://keepachangelog.com/en/1.1.0/), adapted for
-ticket-driven work — newest entry always at the top.
+Newest entry always at the top. Each entry is written for end users — the
+topmost section is copied verbatim into the GitHub release notes by the
+release workflow, so keep it behavior-focused, plain-English, and at most
+four bullet points.
 
-## [Unreleased]
+## 2026-07-03
 
-### Changed
-- Custom timeout entry no longer takes typed units: a number box plus a sec/min/hr dropdown, with the range enforced at 5 seconds to 5 hours (was 24h).
-- Tests rewritten in the team's givenpy style via a new C# `Bdd` template (`tests/unit/Bdd.cs`): `using (Given(...)) / (When(...)) / (Then(...))` scopes, imported with `using static`.
-
-### Added
-- Mic auto-stop duration picker: clicking the pill's empty space (beside the mic button) opens a popup above the pill with 15s/30s/1m/5m/10m/1h presets plus a custom entry (`45`, `90s`, `2m`, `1h`). Default stays 30s; persisted in config and applied live. Parsing covered by unit tests (`DurationText`).
-- Unit test project (`tests/unit`, xUnit, given-when-then style) wired into the solution.
-- Release notes are now derived from `CHANGELOG.md`: the workflow embeds the newest changelog section in each GitHub release and appends GitHub's auto-generated commit list (`--generate-notes`).
-
-### Fixed
-- `StartupRegistration` no longer falls back to `Assembly.Location` (empty in single-file publishes, warning IL3000); the run-at-startup registry command is built from `Environment.ProcessPath` with an `AppContext.BaseDirectory` fallback, covered by regression tests.
-- Floating pill can no longer be dragged or restored off-screen: it now clamps to the work area (screen minus taskbar) of its current monitor on drag-drop, on startup, and whenever shown (`FloatingPanel.xaml.cs`), with DPI-aware Win32 monitor lookup.
-
-### Changed
-- Rewrote `CLAUDE.md` for this C#/.NET 8 WPF project (was written for a Python project): replaced Python/Gemini-specific rules with C# conventions, project layout, and build/publish commands.
-- Added this `CHANGELOG.md`.
+- The floating mic pill can no longer get lost off the screen: it snaps back into view if you drop it past any edge or under the taskbar, and it rescues itself on startup after a resolution or monitor change.
+- Click the empty space on the pill (next to the mic button) to choose how long the mic stays on before it auto-stops — presets from 15 seconds to 1 hour, or a custom value up to 5 hours. The default is still 30 seconds.
+- "Start with Windows" now always registers the correct program path.
+- Release notes are now generated from this changelog, so update notifications describe what actually changed.
