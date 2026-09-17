@@ -32,6 +32,7 @@ models/
 *.log
 appsettings.local.json
 /dist/
+/dist-arm64/
 
 # Local scratch data (pressure-test audio samples, etc.) — not for distribution
 /.var/
