@@ -18,12 +18,18 @@ namespace NemoVoiceTyping.Services;
 ///   started if no sentence boundary exists yet)
 /// * Auto-capitalisation at the start of a sentence
 ///
-/// Everything is driven from a single worker thread. Call <see cref="Push"/>
-/// on every emitted piece and <see cref="Tick"/> on a steady cadence so
-/// the pause-based logic fires.
+/// Calls from the ASR worker, tick timer and UI thread are serialized by an
+/// instance-level lock. Call <see cref="Push"/> on every emitted piece and
+/// <see cref="Tick"/> on a steady cadence so the pause-based logic fires.
 /// </summary>
 public sealed class DictationProcessor
 {
+    /// <summary>Serialises the ASR worker thread, the tick timer's thread-pool
+    /// thread and the UI thread, which all reach the mutable state below.
+    /// Without it <see cref="StringBuilder.ToString"/> can observe a desynced
+    /// chunk length and return repeated characters.</summary>
+    private readonly object _gate = new();
+
     private readonly StringBuilder _wordBuf = new();
 
     /// <summary>Each entry is the exact substring typed into the focused window.</summary>
@@ -60,35 +66,45 @@ public sealed class DictationProcessor
 
     public void FlushBuffer()
     {
-        if (_wordBuf.Length > 0) FlushWord();
-        if (_pendingCommand != null) ClearPending(commit: true);
+        lock (_gate)
+        {
+            if (_wordBuf.Length > 0) FlushWord();
+            if (_pendingCommand != null) ClearPending(commit: true);
+        }
     }
 
     public void Reset()
     {
-        _wordBuf.Clear();
-        _emitted.Clear();
-        _sentenceStart = true;
-        _pendingCommand = null;
-        _pendingCommandTyped = null;
-        _lastWordUtc = DateTime.MinValue;
-        _lastPieceUtc = DateTime.MinValue;
+        lock (_gate)
+        {
+            _wordBuf.Clear();
+            _emitted.Clear();
+            _sentenceStart = true;
+            _pendingCommand = null;
+            _pendingCommandTyped = null;
+            _lastWordUtc = DateTime.MinValue;
+            _lastPieceUtc = DateTime.MinValue;
+        }
     }
 
     /// <summary>Push a sub-word piece from the ASR.</summary>
     public void Push(string piece)
     {
         if (string.IsNullOrEmpty(piece)) return;
-        bool boundary = piece[0] == '▁';
-        string clean = boundary ? piece.Substring(1) : piece;
 
-        if (boundary && _wordBuf.Length > 0)
-            FlushWord();
+        lock (_gate)
+        {
+            bool boundary = piece[0] == '▁';
+            string clean = boundary ? piece.Substring(1) : piece;
 
-        if (clean.Length > 0)
-            _wordBuf.Append(clean);
+            if (boundary && _wordBuf.Length > 0)
+                FlushWord();
 
-        _lastPieceUtc = DateTime.UtcNow;
+            if (clean.Length > 0)
+                _wordBuf.Append(clean);
+
+            _lastPieceUtc = DateTime.UtcNow;
+        }
     }
 
     /// <summary>
@@ -99,14 +115,17 @@ public sealed class DictationProcessor
     /// </summary>
     public void Tick()
     {
-        var now = DateTime.UtcNow;
-        if (_wordBuf.Length > 0 && now - _lastPieceUtc > BufferIdleFlush)
+        lock (_gate)
         {
-            FlushWord();
-        }
-        if (_pendingCommand != null && now - _pendingCommandUtc > CommandWindow)
-        {
-            ClearPending(commit: true);
+            var now = DateTime.UtcNow;
+            if (_wordBuf.Length > 0 && now - _lastPieceUtc > BufferIdleFlush)
+            {
+                FlushWord();
+            }
+            if (_pendingCommand != null && now - _pendingCommandUtc > CommandWindow)
+            {
+                ClearPending(commit: true);
+            }
         }
     }
 
