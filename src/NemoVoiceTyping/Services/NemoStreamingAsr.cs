@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -50,7 +49,11 @@ public sealed class NemoStreamingAsr : IDisposable
     private readonly NamedOnnxValue[] _decOnce;
     private readonly NamedOnnxValue[] _jointOnce;
 
-    private readonly List<float> _audioBuf = new();
+    /// <summary>Samples waiting to complete the next chunk. Never holds a full
+    /// chunk once <see cref="PushAudio"/> returns, since a full buffer is
+    /// consumed immediately.</summary>
+    private readonly float[] _audioBuf = new float[ChunkSamples];
+    private int _audioFill;
 
     /// <summary>Previous mel frames carried into the next chunk's pre-encode cache.</summary>
     private readonly float[,] _melCache = new float[NMels, PreEncodeCacheFrames];
@@ -149,7 +152,7 @@ public sealed class NemoStreamingAsr : IDisposable
         _hInTensor.Buffer.Span.Clear();
         _cInTensor.Buffer.Span.Clear();
         _lastToken = BlankId;
-        _audioBuf.Clear();
+        _audioFill = 0;
         _melCachePrimed = false;
         Array.Clear(_melCache);
     }
@@ -157,15 +160,17 @@ public sealed class NemoStreamingAsr : IDisposable
     /// <summary>Push new PCM samples; emits tokens as they decode.</summary>
     public void PushAudio(ReadOnlySpan<float> samples)
     {
-        for (int i = 0; i < samples.Length; i++) _audioBuf.Add(samples[i]);
-
-        while (_audioBuf.Count >= ChunkSamples)
+        while (!samples.IsEmpty)
         {
-            var chunk = new float[ChunkSamples];
-            _audioBuf.CopyTo(0, chunk, 0, ChunkSamples);
-            _audioBuf.RemoveRange(0, ChunkSamples);
+            int take = Math.Min(ChunkSamples - _audioFill, samples.Length);
+            samples[..take].CopyTo(_audioBuf.AsSpan(_audioFill));
+            _audioFill += take;
+            samples = samples[take..];
 
-            ProcessChunk(chunk);
+            if (_audioFill < ChunkSamples) break;
+
+            ProcessChunk(_audioBuf);
+            _audioFill = 0;
         }
     }
 
