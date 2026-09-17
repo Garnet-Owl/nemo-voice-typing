@@ -56,10 +56,10 @@ public sealed class NemoStreamingAsr : IDisposable
     private readonly float[,] _melCache = new float[NMels, PreEncodeCacheFrames];
     private bool _melCachePrimed;
 
-    /// <summary>Encoder state, kept across chunks.</summary>
-    private float[] _cacheLastChannel = new float[1 * EncLayers * LeftContext * EncHidden];
-    private float[] _cacheLastTime = new float[1 * EncLayers * EncHidden * ConvContext];
-    private long[] _cacheLastChannelLen = new long[] { 0 };
+    /// <summary>Encoder state, kept across chunks and updated in place.</summary>
+    private readonly float[] _cacheLastChannel = new float[1 * EncLayers * LeftContext * EncHidden];
+    private readonly float[] _cacheLastTime = new float[1 * EncLayers * EncHidden * ConvContext];
+    private readonly long[] _cacheLastChannelLen = new long[1];
 
     /// <summary>Decoder state, kept across utterances.</summary>
     private float[] _h = new float[DecLayers * 1 * DecHidden];
@@ -106,7 +106,12 @@ public sealed class NemoStreamingAsr : IDisposable
         {
             NamedOnnxValue.CreateFromTensor("audio_signal", _encInTensor),
             NamedOnnxValue.CreateFromTensor("length", _lengthTensor),
-            null!, null!, null!,
+            NamedOnnxValue.CreateFromTensor("cache_last_channel",
+                new DenseTensor<float>(_cacheLastChannel, new[] { 1, EncLayers, LeftContext, EncHidden })),
+            NamedOnnxValue.CreateFromTensor("cache_last_time",
+                new DenseTensor<float>(_cacheLastTime, new[] { 1, EncLayers, EncHidden, ConvContext })),
+            NamedOnnxValue.CreateFromTensor("cache_last_channel_len",
+                new DenseTensor<long>(_cacheLastChannelLen, new[] { 1 })),
         };
 
         _decOnce = new NamedOnnxValue[]
@@ -153,9 +158,10 @@ public sealed class NemoStreamingAsr : IDisposable
     }
 
     /// <summary>
-    /// ONNX may reassign the backing arrays of state tensors on every run,
-    /// so the cache tensor wrappers are rebuilt per call around the float
-    /// buffers ONNX returns.
+    /// The encoder's state caches are read from and written back to the same
+    /// buffers each chunk. That is safe only because Run has returned by the
+    /// time the outputs are copied: ONNX allocates its own output memory, so
+    /// nothing aliases the destination at the point of the write.
     /// </summary>
     private void ProcessChunk(float[] chunk)
     {
@@ -174,13 +180,6 @@ public sealed class NemoStreamingAsr : IDisposable
                 _melCache[m, t] = newMels[m, newFrames - PreEncodeCacheFrames + t];
         _melCachePrimed = true;
 
-        _encOnce[2] = NamedOnnxValue.CreateFromTensor("cache_last_channel",
-            new DenseTensor<float>(_cacheLastChannel, new[] { 1, EncLayers, LeftContext, EncHidden }));
-        _encOnce[3] = NamedOnnxValue.CreateFromTensor("cache_last_time",
-            new DenseTensor<float>(_cacheLastTime, new[] { 1, EncLayers, EncHidden, ConvContext }));
-        _encOnce[4] = NamedOnnxValue.CreateFromTensor("cache_last_channel_len",
-            new DenseTensor<long>(_cacheLastChannelLen, new[] { 1 }));
-
         using var encResults = _encoder.Run(_encOnce);
         Tensor<float>? encOut = null;
         foreach (var v in encResults)
@@ -188,9 +187,9 @@ public sealed class NemoStreamingAsr : IDisposable
             switch (v.Name)
             {
                 case "outputs": encOut = v.AsTensor<float>(); break;
-                case "cache_last_channel_next": _cacheLastChannel = v.AsTensor<float>().ToArray(); break;
-                case "cache_last_time_next": _cacheLastTime = v.AsTensor<float>().ToArray(); break;
-                case "cache_last_channel_len_next": _cacheLastChannelLen = v.AsTensor<long>().ToArray(); break;
+                case "cache_last_channel_next": CopyTensor(v.AsTensor<float>(), _cacheLastChannel); break;
+                case "cache_last_time_next": CopyTensor(v.AsTensor<float>(), _cacheLastTime); break;
+                case "cache_last_channel_len_next": CopyTensor(v.AsTensor<long>(), _cacheLastChannelLen); break;
             }
         }
         if (encOut == null) return;
@@ -246,6 +245,20 @@ public sealed class NemoStreamingAsr : IDisposable
     {
         var span = dst.Buffer.Span;
         src.AsSpan().CopyTo(span);
+    }
+
+    /// <summary>
+    /// Copies an inference output into a preallocated buffer. Replaces
+    /// <c>Tensor&lt;T&gt;.ToArray()</c>, which resolves to the LINQ extension and
+    /// allocates a fresh array per call — 6.5 MB on the large object heap for
+    /// the encoder's channel cache alone, every 560 ms.
+    /// </summary>
+    private static void CopyTensor<T>(Tensor<T> source, T[] destination)
+    {
+        if (source is not DenseTensor<T> dense)
+            throw new InvalidOperationException(
+                $"Expected a dense tensor from ONNX, got {source.GetType().Name}.");
+        dense.Buffer.Span.CopyTo(destination);
     }
 
     public void Dispose()
