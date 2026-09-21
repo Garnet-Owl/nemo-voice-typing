@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="NemoVoiceTyping.Tests" />
+    <InternalsVisibleTo Include="NemoVoiceTyping.IntegrationTests" />
   </ItemGroup>
 
   <ItemGroup>

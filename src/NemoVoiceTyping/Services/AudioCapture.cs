@@ -12,6 +12,14 @@ namespace NemoVoiceTyping.Services;
 public sealed class AudioCapture : IDisposable
 {
     public const int SampleRate = 16000;
+
+    /// <summary>Digital gain applied to every captured sample. NAudio hands
+    /// back raw OS-level mic input with no automatic gain control, and most
+    /// mics sit well below full scale at normal speaking volume, so the
+    /// signal reaching the ASR model is boosted here before it's used for
+    /// anything else.</summary>
+    private const float InputGain = 4.0f;
+
     private WaveInEvent? _wave;
 
     public event Action<float[]>? SamplesAvailable;
@@ -44,7 +52,7 @@ public sealed class AudioCapture : IDisposable
         for (int i = 0; i < sampleCount; i++)
         {
             short s = (short)(bytes[i * 2] | (bytes[i * 2 + 1] << 8));
-            float f = s * scale;
+            float f = ApplyGain(s * scale);
             buf[i] = f;
             sumSq += f * f;
         }
@@ -56,22 +64,32 @@ public sealed class AudioCapture : IDisposable
         LevelAvailable?.Invoke(level);
     }
 
-    /// <summary>Maps roughly -45..-5 dBFS onto 0..1 for the level meter.</summary>
-    private static double MapDecibelsToUnitLevel(double db)
-        => Math.Clamp((db + 45.0) / 40.0, 0.0, 1.0);
+    /// <summary>Boosts a normalized sample by <see cref="InputGain"/>, then
+    /// soft-limits with tanh so already-loud input saturates smoothly
+    /// instead of hard-clipping into distortion.</summary>
+    internal static float ApplyGain(float sample) => MathF.Tanh(sample * InputGain);
 
+    /// <summary>Maps roughly -60..-12 dBFS onto 0..1 for the level meter.
+    /// Calibrated against recorded speech peaking around -19 dBFS; the
+    /// previous -45..-5 window left the meter barely moving for normal
+    /// speaking volume.</summary>
+    internal static double MapDecibelsToUnitLevel(double db)
+        => Math.Clamp((db + 60.0) / 48.0, 0.0, 1.0);
+
+    /// <summary>Stops and releases the underlying wave-in device. A fresh
+    /// <see cref="WaveInEvent"/> is opened on the next <see cref="Start"/>,
+    /// so the native device handle must not outlive one dictation session
+    /// or repeated toggling leaks a handle per call.</summary>
     public void Stop()
     {
         if (!IsRunning) return;
-        _wave?.StopRecording();
+        _wave!.DataAvailable -= OnData;
+        _wave.StopRecording();
+        _wave.Dispose();
+        _wave = null;
         IsRunning = false;
     }
 
-    public void Dispose()
-    {
-        Stop();
-        _wave?.Dispose();
-        _wave = null;
-    }
+    public void Dispose() => Stop();
 }
 
