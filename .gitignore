@@ -32,3 +32,6 @@ models/
 *.log
 appsettings.local.json
 /dist/
+
+# Local scratch data (pressure-test audio samples, etc.) — not for distribution
+/.var/

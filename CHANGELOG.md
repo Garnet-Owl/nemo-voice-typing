@@ -5,6 +5,11 @@ topmost section is copied verbatim into the GitHub release notes by the
 release workflow, so keep it behavior-focused, plain-English, and at most
 four bullet points.
 
+## 2026-09-22 — Better mic pickup, and a memory leak fixed
+
+- The app now boosts your mic input before transcribing, so quieter voices and mics come through more clearly; the level meter on the pill was also recalibrated, since it barely moved at normal speaking volume before.
+- Fixed a bug where toggling dictation on and off repeatedly over a session would gradually use more memory and slow down; you no longer need to restart the app to get performance back.
+
 ## 2026-07-03 — A mic pill that stays on screen, and control over auto-stop
 
 - The floating mic pill can no longer get lost off the screen: it snaps back into view if you drop it past any edge or under the taskbar, and it rescues itself on startup after a resolution or monitor change.
