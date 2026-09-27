@@ -11,7 +11,12 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
-    <PlatformTarget>x64</PlatformTarget>
+    <!--
+      Without a RuntimeIdentifier the build stays x64, as before. When one is
+      supplied (publish), the RID picks the architecture instead, so the same
+      project publishes win-x64 and win-arm64.
+    -->
+    <PlatformTarget Condition="'$(RuntimeIdentifier)' == ''">x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
