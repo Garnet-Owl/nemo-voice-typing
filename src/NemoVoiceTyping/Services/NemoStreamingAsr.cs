@@ -169,8 +169,11 @@ public sealed class NemoStreamingAsr : IDisposable
 
             if (_audioFill < ChunkSamples) break;
 
-            ProcessChunk(_audioBuf);
+            // Must stay ahead of ProcessChunk: DictationController swallows
+            // exceptions from PushAudio, so a chunk that throws after a reset
+            // placed below would be reprocessed on every later push.
             _audioFill = 0;
+            ProcessChunk(_audioBuf);
         }
     }
 
