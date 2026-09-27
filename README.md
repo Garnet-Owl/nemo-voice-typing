@@ -112,6 +112,12 @@ The single-file exe lands in `dist\Nemo Voice Typing.exe`.
 
 The whole app is a few hundred lines of C#. See `src/NemoVoiceTyping/`.
 
+## Contributing
+
+Bug reports and pull requests are welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for setup, testing and what a pull
+request needs before it can be merged.
+
 ## Credits
 
 Uses [`Garnet-Owl/nemo-voice-typing-asr`](https://huggingface.co/Garnet-Owl/nemo-voice-typing-asr),
