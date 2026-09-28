@@ -5,6 +5,12 @@ topmost section is copied verbatim into the GitHub release notes by the
 release workflow, so keep it behavior-focused, plain-English, and at most
 four bullet points.
 
+## 2026-09-27 — Native Windows ARM64 builds, steadier dictation
+
+- The app now builds natively for Windows ARM64. Previously it had to run emulated, which is slower. Downloadable releases are still x64 only; ARM64 requires building from source.
+- Fixed words occasionally being typed twice, or going missing after a pause.
+- Dictation churns through far less memory while running, so longer sessions should feel smoother.
+
 ## 2026-09-22 — Better mic pickup, and a memory leak fixed
 
 - The app now boosts your mic input before transcribing, so quieter voices and mics come through more clearly; the level meter on the pill was also recalibrated, since it barely moved at normal speaking volume before.
