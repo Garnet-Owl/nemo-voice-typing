@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Windows;
 
@@ -10,6 +11,11 @@ namespace NemoVoiceTyping.Services;
 /// Uses SendInput with KEYEVENTF_UNICODE so it works for any Unicode codepoint
 /// (including BMP and supplementary planes via UTF-16 surrogate pairs) without
 /// touching the user's clipboard.
+///
+/// The exception is Windows 11 Notepad's editor, which loses injected key
+/// events: words arrive as a run of their last character, or vanish. There the
+/// text is pasted instead, which takes four key events whatever its length;
+/// see <see cref="DictationClipboard"/>.
 /// </summary>
 public static class TextInjector
 {
@@ -39,14 +45,37 @@ public static class TextInjector
     private const uint KEYEVENTF_UNICODE = 0x0004;
     private const ushort VK_BACK = 0x08;
     private const ushort VK_RETURN = 0x0D;
+    private const ushort VK_CONTROL = 0x11;
+    private const ushort VK_V = 0x56;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct GUITHREADINFO
+    {
+        public int cbSize;
+        public uint flags;
+        public IntPtr hwndActive, hwndFocus, hwndCapture, hwndMenuOwner, hwndMoveSize, hwndCaret;
+        public int caretLeft, caretTop, caretRight, caretBottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO gui);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassNameW(IntPtr hWnd, StringBuilder className, int maxCount);
+
+    /// <summary>Set from <c>AppConfig.TextInjection</c>: auto, keystrokes or clipboard.</summary>
+    public static string Mode { get; set; } = "auto";
+
+    private const string NotepadEditorClass = "RichEditD2DPT";
 
     /// <summary>Each UTF-16 code unit needs two INPUTs: key down + key up.</summary>
     public static void Type(string text)
     {
         if (string.IsNullOrEmpty(text)) return;
+        if (TryPaste(text)) return;
 
         var inputs = new INPUT[text.Length * 2];
         for (int i = 0; i < text.Length; i++)
@@ -92,5 +121,38 @@ public static class TextInjector
         inputs[0] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_RETURN } } };
         inputs[1] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_RETURN, dwFlags = KEYEVENTF_KEYUP } } };
         SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
+    }
+
+    /// <summary>
+    /// Only Notepad's editor is matched so far. Other controls that lose
+    /// keystrokes, such as Terminal's XAML input site, need checking one at a
+    /// time, since Ctrl+V is not paste everywhere.
+    /// </summary>
+    internal static bool ShouldPaste(string mode, string focusedClass)
+    {
+        if (mode.Equals("clipboard", StringComparison.OrdinalIgnoreCase)) return true;
+        if (mode.Equals("keystrokes", StringComparison.OrdinalIgnoreCase)) return false;
+        return focusedClass == NotepadEditorClass;
+    }
+
+    private static bool TryPaste(string text) =>
+        ShouldPaste(Mode, FocusedClassName()) && DictationClipboard.TryPaste(text, PressCtrlV);
+
+    private static string FocusedClassName()
+    {
+        var info = new GUITHREADINFO { cbSize = Marshal.SizeOf<GUITHREADINFO>() };
+        if (!GetGUIThreadInfo(0, ref info) || info.hwndFocus == IntPtr.Zero) return "";
+        var name = new StringBuilder(256);
+        return GetClassNameW(info.hwndFocus, name, name.Capacity) > 0 ? name.ToString() : "";
+    }
+
+    private static void PressCtrlV()
+    {
+        var inputs = new INPUT[4];
+        inputs[0] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_CONTROL } } };
+        inputs[1] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_V } } };
+        inputs[2] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_V, dwFlags = KEYEVENTF_KEYUP } } };
+        inputs[3] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_CONTROL, dwFlags = KEYEVENTF_KEYUP } } };
+        SendInput(4, inputs, Marshal.SizeOf(typeof(INPUT)));
     }
 }
