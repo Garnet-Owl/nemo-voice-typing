@@ -26,6 +26,17 @@ public sealed class AppConfig
     /// </summary>
     public int IdleTimeoutSeconds { get; set; } = 30;
 
+    /// <summary>
+    /// How dictated text reaches the focused window.
+    ///
+    /// <c>auto</c> sends keystrokes, and pastes instead into Windows 11
+    /// Notepad, which drops synthesised keystrokes. <c>keystrokes</c> never
+    /// touches the clipboard but garbles text in Notepad. <c>clipboard</c>
+    /// always pastes, which fails where Ctrl+V is not paste, such as some
+    /// terminals and password fields.
+    /// </summary>
+    public string TextInjection { get; set; } = "auto";
+
     private static readonly string ConfigPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "NemoVoiceTyping", "config.json");
