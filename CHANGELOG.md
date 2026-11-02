@@ -5,6 +5,12 @@ topmost section is copied verbatim into the GitHub release notes by the
 release workflow, so keep it behavior-focused, plain-English, and at most
 four bullet points.
 
+## 2026-11-02 — Dictation that works in Notepad
+
+- Dictating into Windows 11 Notepad no longer garbles or drops words. Notepad loses some of the keystrokes the app sends, so text is now pasted into Notepad instead. Everywhere else, typing works exactly as before.
+- Whatever you had copied is put back when dictation stops, including images, files and formatted text. Dictated words are kept out of clipboard history.
+- If text comes out garbled in another app, you can set `TextInjection` to `clipboard` in `config.json` to always paste, or set to `keystrokes` to never use the clipboard.
+
 ## 2026-09-27 — Native Windows ARM64 builds, steadier dictation
 
 - The app now builds natively for Windows ARM64. Previously it had to run emulated, which is slower. Downloadable releases are still x64 only; ARM64 requires building from source.
