@@ -71,6 +71,13 @@ public static class TextInjector
 
     private const string NotepadEditorClass = "RichEditD2DPT";
 
+    /// <summary>
+    /// Gap between Backspace presses where batched key events get lost. One
+    /// press at a time, 15 ms apart, removed every character in the
+    /// maintainer's tests on Notepad, where a single batch often removed fewer.
+    /// </summary>
+    private const int BackspaceGapMs = 15;
+
     /// <summary>Each UTF-16 code unit needs two INPUTs: key down + key up.</summary>
     public static void Type(string text)
     {
@@ -98,6 +105,11 @@ public static class TextInjector
     public static void Backspace(int count)
     {
         if (count <= 0) return;
+        if (ShouldPaste(Mode, FocusedClassName()))
+        {
+            BackspaceOneAtATime(count);
+            return;
+        }
         var inputs = new INPUT[count * 2];
         for (int i = 0; i < count; i++)
         {
@@ -137,6 +149,18 @@ public static class TextInjector
 
     private static bool TryPaste(string text) =>
         ShouldPaste(Mode, FocusedClassName()) && DictationClipboard.TryPaste(text, PressCtrlV);
+
+    private static void BackspaceOneAtATime(int count)
+    {
+        var press = new INPUT[2];
+        press[0] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_BACK } } };
+        press[1] = new INPUT { type = INPUT_KEYBOARD, U = new InputUnion { ki = new KEYBDINPUT { wVk = VK_BACK, dwFlags = KEYEVENTF_KEYUP } } };
+        for (int i = 0; i < count; i++)
+        {
+            SendInput(2, press, Marshal.SizeOf(typeof(INPUT)));
+            Thread.Sleep(BackspaceGapMs);
+        }
+    }
 
     private static string FocusedClassName()
     {
