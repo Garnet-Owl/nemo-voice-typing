@@ -47,7 +47,8 @@ with Windows**.
 
 The pill stays on top so you can drag it wherever. Position is
 remembered between launches. Hotkey is configurable in
-`%APPDATA%\NemoVoiceTyping\config.json`.
+`%APPDATA%\NemoVoiceTyping\config.json`, as is `TextInjection` (`auto`,
+`keystrokes` or `clipboard`), which sets how dictated text is typed.
 
 * **Auto-off on silence** — like Windows' own voice typing, the mic only
   listens while you're actually using it: if it doesn't recognize any
