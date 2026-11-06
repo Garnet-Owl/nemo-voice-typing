@@ -5,6 +5,11 @@ topmost section is copied verbatim into the GitHub release notes by the
 release workflow, so keep it behavior-focused, plain-English, and at most
 four bullet points.
 
+## 2026-11-06 — A clearer app icon and getting-started guide
+
+- The app and tray now use a cleaner microphone icon that matches the floating control.
+- The README now gives a quicker overview of installation, controls, voice commands, requirements, and privacy. A short demo recording script is also available.
+
 ## 2026-11-02 — Dictation that works in Notepad
 
 - Dictating into Windows 11 Notepad no longer garbles or drops words, and "scratch that" and "delete last" remove expected content. Notepad loses some of the keystrokes the app sends, so text is now pasted into Notepad instead. Everywhere else, typing works exactly as before.
