@@ -1,97 +1,88 @@
 # Nemo Voice Typing
 
-![Nemo Voice Typing](src/NemoVoiceTyping/Assets/app.ico)
+![Nemo Voice Typing icon](src/NemoVoiceTyping/Assets/app.png)
 
-A small Windows tray app for dictating into any focused text field.
-Press **Ctrl+Alt+A**, speak, and the words appear where your cursor is.
-Speech recognition runs locally on the CPU using NVIDIA's NeMo streaming
-model. After the first run it works offline.
+**Free, open-source voice typing for Windows.** Press **Ctrl+Alt+A** or click
+the floating microphone, speak, and your words appear in the focused text
+field. Nemo runs speech recognition locally on your CPU with an NVIDIA NeMo
+streaming model. After the first model download, dictation works offline.
 
-## Why I built it
+Useful for writing messages, notes, searches, and long prompts without
+switching apps or sending your speech to a transcription service.
 
-I'm a machine learning engineer. Most of my "typing" is prompting LLMs
-and agents, which is a lot of long-form text, and my hands were starting
-to hurt. Windows' built-in voice typing is fine, but I wanted something
-that sits in the corner of my screen, starts on a chord I can hit with
-one hand, and ships with a real model. No cloud round-trips and no
-telemetry.
+## What it does
 
-If you want a tool that lets you dictate anywhere, anytime on any window,
-whether searching, typing chats, or anything else on your desktop, and it 
-works really well, keeping your hands off the keyboard: I built it in one evening of 
-tinkering, here it is.
+| Feature | What you get |
+| --- | --- |
+| Dictate across Windows | Type into the active text field with a global shortcut or the floating mic. |
+| Private, offline recognition | Speech is processed on your PC after the one-time model download; no telemetry. |
+| Quick editing by voice | Say “new line,” “period,” “delete last,” or “scratch that.” |
+| Personal dictionary | Add names, places, and terms that are often misheard. |
+| Flexible controls | Move the always-on-top mic, change its idle timeout, or start Nemo with Windows. |
 
-## Install
+## Get started
 
-1. Grab `Nemo Voice Typing.exe` from
-   [Releases](https://github.com/Garnet-Owl/nemo-voice-typing/releases),
-   or build from source (see below).
-2. Double-click to run. A small pill appears on the right edge of the
-   screen and a microphone icon shows up in the system tray.
-3. The first time you press the hotkey the app downloads the ~700 MB ASR
-   model from [Hugging Face](https://huggingface.co/Garnet-Owl/nemo-voice-typing-asr)
-   into `%LOCALAPPDATA%\NemoVoiceTyping\models\`. Takes about a minute on
-   a normal connection.
+1. Download **Nemo Voice Typing.exe** from
+   [GitHub Releases](https://github.com/Garnet-Owl/nemo-voice-typing/releases).
+2. Run it. The floating microphone appears near the right edge of the screen,
+   and a tray icon appears in the notification area.
+3. Place your cursor in a text field and press **Ctrl+Alt+A** or click the mic.
+   The first use downloads the roughly 700 MB speech model from
+   [Hugging Face](https://huggingface.co/Garnet-Owl/nemo-voice-typing-asr).
+4. Speak normally. Press the shortcut or click the mic again to stop.
 
-To auto-start with Windows, right-click the tray icon and pick **Start
-with Windows**.
+The model is cached under `%LOCALAPPDATA%\NemoVoiceTyping\models\`.
+Nemo stops listening after 30 seconds without recognized speech by default.
+Click the empty area of the floating control to change the timeout.
 
-## Use
-
-| Action | How |
-|---|---|
-| Toggle dictation | **Ctrl+Alt+A**, or click the mic on the pill |
-| Hide the pill | Right-click pill, then Hide |
-| Show the pill | Left-click the tray icon |
-| Quit | Right-click the tray icon, then Exit |
-
-The pill stays on top so you can drag it wherever. Position is
-remembered between launches. Hotkey is configurable in
-`%APPDATA%\NemoVoiceTyping\config.json`, as is `TextInjection` (`auto`,
-`keystrokes` or `clipboard`), which sets how dictated text is typed.
-
-* **Auto-off on silence** — like Windows' own voice typing, the mic only
-  listens while you're actually using it: if it doesn't recognize any
-  speech for about 30 seconds, dictation stops on its own so it isn't
-  burning CPU (or picking up other audio) after you've moved on. Just
-  click the mic or hit the hotkey again to resume.
-
-## Demo
-
-[![Nemo Voice Typing Demo](https://img.youtube.com/vi/k6MXKX_60T0/maxresdefault.jpg)](https://www.youtube.com/watch?v=k6MXKX_60T0)
+| Action | Control |
+| --- | --- |
+| Start or stop dictation | **Ctrl+Alt+A** or click the floating mic |
+| Move the control | Drag the floating pill |
+| Hide the control | Right-click the pill → **Hide panel** |
+| Show the control | Left-click the tray icon |
+| Edit personal vocabulary | Right-click the tray icon → **Personal dictionary...** |
+| Start with Windows | Right-click the tray icon → **Start with Windows** |
+| Exit | Right-click the tray icon → **Exit** |
 
 ### Voice commands
 
-While dictating you can say any of these and they'll be acted on instead
-of typed verbatim. Spoken punctuation works in case the model itself
-misses a mark.
+| Say | Result |
+| --- | --- |
+| “period,” “comma,” “question mark,” “colon,” “semicolon,” or “exclamation mark” | Insert punctuation |
+| “new line” or “new paragraph” | Insert a line break or blank line |
+| “delete last” | Remove the last word |
+| “scratch that” or “delete that” | Remove the last sentence |
 
-| Say | What happens |
-|---|---|
-| "period" / "full stop" / "dot" | Inserts `.` |
-| "comma" | Inserts `,` |
-| "colon" / "semicolon" | Inserts `:` or `;` |
-| "question mark" | Inserts `?` |
-| "exclamation mark" / "exclamation point" | Inserts `!` |
-| "new line" | Inserts a line break |
-| "new paragraph" | Inserts a blank line |
-| "delete last" | Deletes the last word |
-| "scratch that" / "delete that" | Deletes the last sentence |
+Model punctuation is preserved, sentence starts are capitalized, and the
+personal dictionary can correct frequently misheard terms.
 
-Punctuation from the model itself is always respected. Capitalization
-at sentence starts is automatic, and mixed-case words like `iPhone`
-are left alone.
+## Requirements and settings
 
-## System requirements
+- Windows 10 or 11 on x64 with an AVX2-capable CPU; no GPU required.
+- [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+  Windows offers to install it if needed.
+- Approximately 700 MB of disk space for the model and around 800 MB of RAM
+  while running. Releases currently provide x64 builds; ARM64 can be built
+  from source.
 
-* Windows 10 or 11, x64 (tested on Windows 11)
-* RAM usage is around 800 MB (model plus ONNX runtime)
-* Any modern x86-64 CPU with AVX2. No GPU needed.
-* .NET 8 desktop runtime (Windows prompts to install it on first launch
-  if missing).
-* About 12 MB for the app and 700 MB for the cached model.
+Settings are saved in `%APPDATA%\NemoVoiceTyping\config.json`. You can change
+`Hotkey` and `TextInjection` there. `TextInjection` defaults to `auto`: it
+types with keystrokes, but pastes into Windows 11 Notepad because Notepad can
+drop simulated keystrokes. Set it to `clipboard` to always paste or
+`keystrokes` to never use the clipboard.
 
-## Build
+## Watch the demo
+
+[![Watch Nemo Voice Typing in action](https://img.youtube.com/vi/k6MXKX_60T0/maxresdefault.jpg)](https://www.youtube.com/watch?v=k6MXKX_60T0)
+
+A [short recording script and video-generation prompt](VIDEO_DEMO_SCRIPT.md)
+are available if you want to make a new demo.
+
+## Build from source
+
+Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0),
+then run on Windows:
 
 ```powershell
 git clone https://github.com/Garnet-Owl/nemo-voice-typing
@@ -101,32 +92,13 @@ dotnet publish src/NemoVoiceTyping/NemoVoiceTyping.csproj -c Release -r win-x64 
     -p:IncludeNativeLibrariesForSelfExtract=true -o dist
 ```
 
-The single-file exe lands in `dist\Nemo Voice Typing.exe`.
+The executable is `dist\Nemo Voice Typing.exe`. For a native ARM64 build,
+use `-r win-arm64` and a separate output folder. The app uses WPF, NAudio,
+ONNX Runtime, and the Win32 global hotkey and text input APIs.
 
-## Stack
+## Contributing and license
 
-* WPF on .NET 8
-* [Hardcodet.NotifyIcon.Wpf](https://github.com/hardcodet/wpf-notifyicon) for the tray
-* [NAudio](https://github.com/naudio/NAudio) for microphone capture
-* [Microsoft.ML.OnnxRuntime](https://onnxruntime.ai/) for the streaming RNN-T inference
-* Win32 `RegisterHotKey` and `SendInput` for the global hotkey and text injection
-
-The whole app is a few hundred lines of C#. See `src/NemoVoiceTyping/`.
-
-## Contributing
-
-Bug reports and pull requests are welcome. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for setup, testing and what a pull
-request needs before it can be merged.
-
-## Credits
-
-Uses [`Garnet-Owl/nemo-voice-typing-asr`](https://huggingface.co/Garnet-Owl/nemo-voice-typing-asr),
-a redistribution of the NVIDIA NeMo `nemotron-speech-streaming-en-0.6b`
-model (INT4 ONNX) bundled with Silero VAD. See that repo for the model
-licenses.
-
-## License
-
-MIT for this repo's code. The model has its own license, covered on the
-Hugging Face page.
+Bug reports and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for setup and tests. The application code is MIT licensed. The speech model
+has separate terms; see the
+[model page](https://huggingface.co/Garnet-Owl/nemo-voice-typing-asr).
