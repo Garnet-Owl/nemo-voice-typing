@@ -1,6 +1,6 @@
 # Nemo Voice Typing: free offline voice typing for Windows
 
-![Nemo Voice Typing icon](src/NemoVoiceTyping/Assets/app.png)
+<img src="src/NemoVoiceTyping/Assets/app.png" alt="Nemo Voice Typing icon" width="96" align="right">
 
 Nemo is a free, open-source dictation app for Windows 10 and 11. Press **Ctrl+Alt+A** or click the floating mic, say what you want to write, and the words show up in whatever text field you're in.
 
