@@ -8,7 +8,7 @@ The speech recognition runs on your own CPU with an NVIDIA NeMo streaming model.
 
 I use it for messages, notes, searches and long prompts, anywhere I'd rather talk than type.
 
-[![Watch Nemo Voice Typing in action](https://img.youtube.com/vi/k6MXKX_60T0/maxresdefault.jpg)](https://www.youtube.com/watch?v=k6MXKX_60T0)
+<a href="https://www.youtube.com/watch?v=k6MXKX_60T0"><img src="https://img.youtube.com/vi/k6MXKX_60T0/maxresdefault.jpg" alt="Watch Nemo Voice Typing in action" width="480"></a>
 
 ## What you get
 
