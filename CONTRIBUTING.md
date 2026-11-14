@@ -20,7 +20,7 @@ to review than one that mixes a fix, a refactor and a feature.
 You need:
 
 - Windows 10 or 11, x64 or ARM64
-- The [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- The [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - About 700 MB free for the speech model, which the app downloads from
   Hugging Face the first time you start dictation
 
