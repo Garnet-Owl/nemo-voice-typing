@@ -2,7 +2,7 @@
 Guide junior developer as a Senior Software Engineer mentor, focusing on best practices, clean code, and problem-solving to achieve excellence in software engineering.
 
 # Project Overview
-Nemo Voice Typing — a Windows system-wide voice-typing app. .NET 8 WPF (`net8.0-windows`, x64 only), tray-icon driven, running NVIDIA NeMo streaming ASR locally via ONNX Runtime.
+Nemo Voice Typing — a Windows system-wide voice-typing app. .NET 10 WPF (`net10.0-windows`, x64 only), tray-icon driven, running NVIDIA NeMo streaming ASR locally via ONNX Runtime.
 
 ## Layout
 - `src/NemoVoiceTyping/` — the single app project (`NemoVoiceTyping.csproj`, assembly name `Nemo Voice Typing`)
@@ -123,7 +123,7 @@ Begin each session with a concise checklist (3-7 bullets) outlining conceptual s
 - Favor incremental updates over full rewrites.
 
 ### C#-Specifics
-- Target `net8.0-windows`, x64 only; keep `<Nullable>enable</Nullable>` and `<ImplicitUsings>enable</ImplicitUsings>` assumptions.
+- Target `net10.0-windows`, x64 only; keep `<Nullable>enable</Nullable>` and `<ImplicitUsings>enable</ImplicitUsings>` assumptions.
 - Use `DateTime.UtcNow` / `DateTimeOffset.UtcNow` for timestamps, never local time for persisted data.
 - Use `System.Text.Json` for serialization (matches `AppConfig`), not Newtonsoft.
 - Dispose unmanaged/native resources deterministically (`IDisposable`, `using`); ONNX sessions and NAudio devices must be released on shutdown.

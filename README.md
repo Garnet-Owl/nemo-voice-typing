@@ -53,7 +53,7 @@ Punctuation from the model is kept, sentences start with a capital, and your per
 ## Requirements
 
 - Windows 10 or 11 on x64 with an AVX2-capable CPU. No GPU.
-- [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0). Windows offers to install it if you don't have it.
+- [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0). Windows offers to install it if you don't have it.
 - About 700 MB of disk space for the model and about 800 MB of RAM while it runs.
 - Releases are x64. You can build ARM64 from source.
 
@@ -65,7 +65,7 @@ Settings live in `%APPDATA%\NemoVoiceTyping\config.json`. You can change `Hotkey
 
 ## Build from source
 
-Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), then on Windows:
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then on Windows:
 
 ```powershell
 git clone https://github.com/Garnet-Owl/nemo-voice-typing
