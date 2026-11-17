@@ -5,6 +5,10 @@ topmost section is copied verbatim into the GitHub release notes by the
 release workflow, so keep it behavior-focused, plain-English, and at most
 four bullet points.
 
+## 2026-11-17 — Moving to .NET 10
+
+- The app now runs on .NET 10, since .NET 8 no longer gets security updates. If Windows asks you to install the .NET 10 Desktop Runtime the first time you open this version, accept it. Nothing else changes.
+
 ## 2026-11-06 — A clearer app icon and getting-started guide
 
 - The app and tray now use a cleaner microphone icon that matches the floating control.
